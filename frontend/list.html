@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Danh sách dữ liệu | BẢO TÀNG SỐ TÂY NAM BỘ</title>
+    <link rel="stylesheet" href="css/list.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="logo" id="headerToggle">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ</div>
+        <nav>
+            <a href="/index.html">Trang chủ</a>
+            <a href="/index.html#timeline">Dòng thời gian</a>
+            <a href="/index.html#map">Bản đồ</a>
+            <a href="/index.html#artifacts">Hiện vật</a>
+            <a href="/list.html">Liệt kê</a>
+        </nav>
+    </header>
+
+    <main class="list-page">
+        <h1 class="page-title">DANH SÁCH DỮ LIỆU</h1>
+
+        <!-- 🔍 Thanh tìm kiếm -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm theo tên, mô tả..." />
+            <button id="searchBtn">Tìm kiếm</button>
+        </div>
+
+        <!-- Bộ lọc theo tỉnh -->
+    <div class="province-filter">
+            <label for="provinceFilter">Lọc theo tỉnh:</label>
+            <select id="provinceFilter">
+                <option value="">Tất cả</option>
+            </select>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-type="artifacts">🏺 Cổ vật</button>
+            <button class="tab-btn" data-type="events">🗓️ Sự kiện</button>
+            <button class="tab-btn" data-type="places">🏛️ Địa điểm</button>
+        </div>
+
+        <!-- Danh sách -->
+        <div id="dataList" class="data-grid">
+            <p>Đang tải dữ liệu...</p>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        © 🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ
+    </footer>
+
+    <script src="js/list.js"></script>
+</body>
+
+</html>

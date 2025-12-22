@@ -1,0 +1,225 @@
+/* ===============================
+   🌅 GIAO DIỆN ĐĂNG NHẬP
+   =============================== */
+
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI", "Inter", sans-serif;
+    background: linear-gradient(135deg, #FAF9F6 0%, #F3ECE4 100%);
+    color: #2B2B2B;
+    overflow: hidden;
+}
+
+/* ===============================
+   📦 KHUNG ĐĂNG NHẬP
+   =============================== */
+
+.login-container {
+    width: 100%;
+    max-width: 480px;
+    /* 🔹 khung to hơn */
+    padding: 25px;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+    padding: 55px 45px;
+    text-align: center;
+    color: #5C4033;
+    box-shadow:
+        0 8px 30px rgba(166, 123, 91, 0.25),
+        inset 0 0 12px rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(166, 123, 91, 0.3);
+    animation: fadeIn 0.8s ease;
+}
+
+/* ===============================
+   🏛️ TIÊU ĐỀ
+   =============================== */
+
+h1 {
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 700;
+    font-size: 2.1rem;
+    color: #5C4033;
+    text-shadow: 0 2px 6px rgba(200, 170, 120, 0.3);
+    margin-bottom: 8px;
+}
+
+h1 span {
+    display: block;
+    font-size: 1.3rem;
+    color: #A67B5B;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    color: #6B5E4B;
+    margin: 14px 0 28px;
+    font-size: 1.05rem;
+    font-weight: 500;
+}
+
+/* ===============================
+   ✏️ INPUT
+   =============================== */
+
+input {
+    width: 100%;
+    padding: 14px 16px;
+    margin: 10px 0;
+    border: 1px solid #A67B5B;
+    border-radius: 8px;
+    background: #FAF9F6;
+    font-size: 16px;
+    color: #2B2B2B;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: none;
+    border-color: #5C4033;
+    box-shadow: 0 0 0 2px rgba(166, 123, 91, 0.2);
+}
+
+input::placeholder {
+    color: #8B7D6B;
+}
+
+/* ===============================
+   👁️ ICON MẮT
+   =============================== */
+
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper button {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7A6248;
+    opacity: 0.8;
+    transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.password-wrapper button:hover {
+    color: #5C4033;
+    opacity: 1;
+}
+
+/* ===============================
+   🔘 NÚT ĐĂNG NHẬP
+   =============================== */
+
+button[type="submit"] {
+    width: 100%;
+    background: #A67B5B;
+    color: #FAF9F6;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    font-family: "Cormorant Garamond", serif;
+    box-sizing: border-box;
+}
+
+button[type="submit"]:hover {
+    background: #8B5A3C;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(92, 64, 51, 0.25);
+}
+
+/* ===============================
+   🔄 LOADING SPINNER
+   =============================== */
+
+.loading {
+    display: none;
+    margin: 15px auto;
+    border: 3px solid rgba(166, 123, 91, 0.3);
+    border-top: 3px solid #A67B5B;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    animation: spin 1s linear infinite;
+}
+
+/* ===============================
+   💬 THÔNG BÁO
+   =============================== */
+
+.message {
+    margin-top: 12px;
+    font-size: 15px;
+    color: #8B0000;
+}
+
+/* ===============================
+   ✨ ANIMATION
+   =============================== */
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===============================
+   📱 RESPONSIVE
+   =============================== */
+
+@media (max-width: 480px) {
+    .login-container {
+        padding: 15px;
+        max-width: 360px;
+    }
+
+    .login-box {
+        padding: 35px 25px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    h1 span {
+        font-size: 1.1rem;
+    }
+}

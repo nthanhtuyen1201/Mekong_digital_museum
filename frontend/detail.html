@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Chi tiết | BẢO TÀNG SỐ TÂY NAM BỘ</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="logo" id="headerToggle">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ</div>
+        <nav>
+            <a href="/index.html">Trang chủ</a>
+            <a href="/index.html#timeline">Dòng thời gian</a>
+            <a href="/index.html#map">Bản đồ</a>
+            <a href="/index.html#artifacts">Hiện vật</a>
+            <a href="/list.html">Liệt kê</a>
+        </nav>
+    </header>
+
+    <main class="detail-container" id="detail">
+        <div class="detail-card" style="max-width:1200px;margin:0 auto;padding:32px;">
+            <div id="detail-content" class="detail-content">
+                <!-- Left: gallery -->
+                <div id="gallery-col" class="fade-in-up">
+                    <div id="gallery-main" style="border-radius:10px;overflow:hidden;background:#0f0f0f;padding:10px;">
+                        <img id="gallery-main-img" src="static/img/noimg.jpg" alt="" style="width:100%;display:block;border-radius:6px;object-fit:cover;max-height:520px">
+                    </div>
+                    <div id="gallery-thumbs" class="image-gallery" style="margin-top:12px"></div>
+                </div>
+
+                <!-- Right: info -->
+                <div id="info-col" class="fade-in-up">
+                    <h1 id="detail-title">Đang tải...</h1>
+                    <div class="detail-meta" id="detail-meta"></div>
+                    <p id="detail-desc"></p>
+                    <div id="detail-links" style="margin-top:12px"></div>
+                </div>
+            </div>
+
+            <!-- Map card (full width) -->
+            <div class="map-card fade-in-up" style="margin-top:20px;">
+                <div id="detail-map" class="detail-map" style="display:none"></div>
+            </div>
+
+            <!-- Video Section -->
+            <section id="videos-section" class="media-section fade-in-up" style="display:none;margin-top:20px;">
+                <h2>📹 Video</h2>
+                <div id="videos-container" class="media-container"></div>
+            </section>
+
+            <!-- Audio Section -->
+            <section id="audios-section" class="media-section fade-in-up" style="display:none;margin-top:20px;">
+                <h2>🎵 Audio</h2>
+                <div id="audios-container" class="media-container"></div>
+            </section>
+
+            <!-- Related items -->
+            <section id="related-section" class="related-section fade-in-up" style="display:none">
+                <div id="related-artifacts-block">
+                    <h2>Hiện vật liên quan <span id="related-artifacts-count" style="font-size:14px;color:#aaa;margin-left:8px"></span></h2>
+                    <div id="related-artifacts" class="related-grid"></div>
+                    <button id="related-artifacts-more" style="display:none;margin-top:8px">Xem thêm</button>
+                </div>
+                <hr style="border-color:#222;margin:12px 0">
+                <div id="related-events-block">
+                    <h2>Sự kiện liên quan <span id="related-events-count" style="font-size:14px;color:#aaa;margin-left:8px"></span></h2>
+                    <div id="related-events" class="related-grid"></div>
+                    <button id="related-events-more" style="display:none;margin-top:8px">Xem thêm</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        © 🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ
+    </footer>
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="js/detail.js"></script>
+</body>
+
+</html>

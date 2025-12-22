@@ -1,0 +1,303 @@
+/* ===============================
+   Trang DANH SÁCH DỮ LIỆU (list.html)
+   =============================== */
+
+/* Biến giúp dễ chỉnh chiều cao header */
+:root {
+    --header-height: 72px;
+    --gold: #c4a267;
+    --dark-bg: #111;
+    --card-bg: #1b1b1b;
+    --text-color: #eee;
+}
+
+/* Tổng thể trang */
+body {
+    margin: 0;
+    padding: 0;
+    background: #FAF9F6;
+    color: #2B2B2B;
+    font-family: "Segoe UI", "Inter", sans-serif;
+}
+
+/* ===============================
+   Header - Giống trang index
+   =============================== */
+.main-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(180deg,
+            #f0cb86 0%,
+            #f6e6c7 100%);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(166, 123, 91, 0.3);
+    box-shadow: 0 4px 10px rgba(166, 123, 91, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.main-header .logo {
+    font-family: "Cormorant Garamond", serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #5C4033;
+    letter-spacing: 0.5px;
+}
+
+.main-header nav a {
+    color: #5C4033;
+    font-weight: 600;
+    margin-left: 24px;
+    text-decoration: none;
+    position: relative;
+    transition: color 0.3s ease;
+    font-size: 18px;
+}
+
+.main-header nav a:hover {
+    color: #A67B5B;
+}
+
+/* Gạch chân hiệu ứng trượt */
+.main-header nav a::after {
+    content: "";
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: #A67B5B;
+    transition: width 0.3s ease;
+}
+
+.main-header nav a:hover::after {
+    width: 100%;
+}
+
+/* ===============================
+   Nội dung chính
+   =============================== */
+.list-page {
+    padding-top: calc(var(--header-height) + 30px);
+    padding-bottom: 40px;
+    text-align: center;
+    background: #FAF9F6;
+}
+
+/* Tiêu đề trang */
+.page-title {
+    font-size: 1.8rem;
+    color: #5C4033;
+    margin-bottom: 20px;
+}
+
+/* ===============================
+   Thanh tìm kiếm
+   =============================== */
+.search-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.search-box input {
+    width: 60%;
+    max-width: 480px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #A67B5B;
+    background: #FAF9F6;
+    color: #2B2B2B;
+}
+
+.search-box button {
+    padding: 10px 15px;
+    border: none;
+    background: #A67B5B;
+    color: #FAF9F6;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.search-box button:hover {
+    background: #8B5A3C;
+}
+
+/* ===============================
+   Tabs (Cổ vật / Sự kiện / Địa điểm)
+   =============================== */
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.tab-btn {
+    padding: 10px 15px;
+    border: none;
+    background: #EFE6DD;
+    color: #5C4033;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.3s, color 0.3s;
+}
+
+.tab-btn:hover {
+    background: #E8D5C4;
+}
+
+.tab-btn.active {
+    background: #A67B5B;
+    color: #FAF9F6;
+}
+
+/* ===============================
+   Lưới dữ liệu
+   =============================== */
+.data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    margin-top: 10px;
+    padding: 0 40px;
+}
+
+/* ===============================
+   Card hiển thị dữ liệu
+   =============================== */
+.data-card {
+    background: #fbf9f4;
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: left;
+    box-shadow: 0 4px 10px rgba(166, 123, 91, 0.15);
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 1px solid rgba(166, 123, 91, 0.4);
+}
+
+.data-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 12px rgba(92, 64, 51, 0.25);
+}
+
+.data-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.data-card .info {
+    padding: 15px;
+}
+
+.data-card h3 {
+    color: #5C4033;
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 700;
+}
+
+.data-card p {
+    font-size: 0.9rem;
+    color: #2B2B2B;
+    margin-bottom: 10px;
+    font-family: "Times New Roman", serif;
+}
+
+.data-card button {
+    background: #A67B5B;
+    color: #FAF9F6;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.data-card button:hover {
+    background: #8B5A3C;
+}
+
+/* ===============================
+   Responsive
+   =============================== */
+@media (max-width: 768px) {
+    .search-box input {
+        width: 70%;
+    }
+
+    .data-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-header {
+        padding: 12px 18px;
+    }
+
+    .main-header .logo {
+        font-size: 18px;
+    }
+
+    .main-header nav a {
+        margin-left: 10px;
+        font-size: 14px;
+    }
+
+    .search-box input {
+        width: 80%;
+    }
+}
+
+/* ===============================
+   Bộ lọc theo tỉnh
+   =============================== */
+.province-filter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.province-filter label {
+    color: #5C4033;
+    font-weight: 600;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 16px;
+}
+
+.province-filter select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #A67B5B;
+    background: #FAF9F6;
+    color: #2B2B2B;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.province-filter select:hover {
+    border-color: #8B5A3C;
+}
+
+.province-filter select:focus {
+    outline: none;
+    border-color: #5C4033;
+    box-shadow: 0 0 0 2px rgba(166, 123, 91, 0.2);
+}
