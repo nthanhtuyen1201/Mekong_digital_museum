@@ -8,9 +8,6 @@ __pycache__/
 .env
 backend/.env
 
-# Uploads and generated media
-backend/uploads/
-
 # VS Code
 .vscode/
 
