@@ -11,9 +11,8 @@ ENV/
 # Environment variables
 .env
 
-# Uploads
-uploads/*
-!uploads/.gitkeep
+# Uploads (track media)
+# Allow tracking files under uploads
 
 # IDE
 .vscode/
