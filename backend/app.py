@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import os, uuid
 import re
+import unicodedata
 import bcrypt
 from dotenv import load_dotenv
 import mongo_utils
@@ -54,18 +55,32 @@ def allowed_file(filename):
     """Kiểm tra định dạng file hợp lệ"""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def remove_vietnamese_marks(text):
+    """Remove Vietnamese diacritical marks (đ, á, ả, ã, ạ, etc.)
+    Converts 'Đồng Tháp' -> 'dong_thap'
+    """
+    # First handle the special D-with-stroke character (Đ/đ) -> D/d
+    text = text.replace('Đ', 'D').replace('đ', 'd')
+    # Decompose characters (e.g., 'á' -> 'a' + combining accent)
+    nfd = unicodedata.normalize('NFD', text)
+    # Remove combining marks (accents, diacritics)
+    cleaned = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+    # Replace spaces with underscores and lowercase
+    return cleaned.lower().replace(' ', '_')
+
 def get_upload_path(obj_type, province=None, item_name=None):
     """Lấy đường dẫn thư mục upload: uploads/{province}/{type}/{item_name}"""
     if province:
-        province_folder = secure_filename(province).lower().replace(' ', '_')
+        # Use remove_vietnamese_marks for province to preserve 'dong_thap' not 'ong_thap'
+        province_folder = remove_vietnamese_marks(province)
         if item_name:
-            item_folder = secure_filename(item_name).lower().replace(' ', '_')
+            item_folder = remove_vietnamese_marks(item_name)
             upload_dir = os.path.join(app.config["UPLOAD_FOLDER"], province_folder, obj_type, item_folder)
         else:
             upload_dir = os.path.join(app.config["UPLOAD_FOLDER"], province_folder, obj_type)
     else:
         if item_name:
-            item_folder = secure_filename(item_name).lower().replace(' ', '_')
+            item_folder = remove_vietnamese_marks(item_name)
             upload_dir = os.path.join(app.config["UPLOAD_FOLDER"], obj_type, item_folder)
         else:
             upload_dir = os.path.join(app.config["UPLOAD_FOLDER"], obj_type)
@@ -91,40 +106,34 @@ def derive_province(doc):
             if parts:
                 prov = parts[-1]
                 prov_clean = re.sub(r"\b(tỉnh|thành phố|thanh pho|tp\.?|tp)\b", "", prov, flags=re.IGNORECASE).strip()
-                low = prov_clean.lower()
+                # Convert to ASCII for matching (e.g., 'Tiền Giang' -> 'tien giang')
+                # This handles both Vietnamese diacritics and already-ASCII input
+                prov_ascii = remove_vietnamese_marks(prov_clean).replace('_', ' ')
+                low = prov_ascii.lower()
                 
                 # Mapping old provinces to 6 post-merge Mekong-Delta units
                 mapping = [
                     # Cần Thơ: Sóc Trăng + Hậu Giang + Cần Thơ
-                    (r"(can\s*tho|cantho|cần\s*thơ)", "Cần Thơ"),
-                    (r"(soc\s*trang|soctrang|sóc\s*trăng)", "Cần Thơ"),
-                    (r"(hau\s*giang|haugia|hậu\s*giang)", "Cần Thơ"),
+                    (r"(can\s*tho|can\s*tho|soc\s*trang|soc\s*trang|hau\s*giang|hau\s*giang)", "Cần Thơ"),
                     # Vĩnh Long: Bến Tre + Vĩnh Long + Trà Vinh
-                    (r"(vinh\s*long|vinhlong|vĩnh\s*long)", "Vĩnh Long"),
-                    (r"(ben\s*tre|bentre|bến\s*tre)", "Vĩnh Long"),
-                    (r"(tra\s*vinh|travinh|trà\s*vinh)", "Vĩnh Long"),
+                    (r"(vinh\s*long|vinh\s*long|ben\s*tre|ben\s*tre|tra\s*vinh|tra\s*vinh)", "Vĩnh Long"),
                     # Đồng Tháp: Tiền Giang + Đồng Tháp
-                    (r"(tien\s*giang|tiengiang|tiền\s*giang)", "Đồng Tháp"),
-                    (r"(dong\s*thap|dongthap|đồng\s*thap)", "Đồng Tháp"),
+                    (r"(tien\s*giang|tien\s*giang|dong\s*thap|dong\s*thap)", "Đồng Tháp"),
                     # Cà Mau: Bạc Liêu + Cà Mau
-                    (r"(ca\s*mau|camau|cà\s*mau)", "Cà Mau"),
-                    (r"(bac\s*lieu|baclieu|bạc\s*liêu)", "Cà Mau"),
+                    (r"(ca\s*mau|ca\s*mau|bac\s*lieu|bac\s*lieu)", "Cà Mau"),
                     # An Giang: Kiên Giang + An Giang
-                    (r"(an\s*giang|angiang)", "An Giang"),
-                    (r"(kien\s*giang|kiengiang|kiên\s*giang)", "An Giang"),
+                    (r"(an\s*giang|an\s*giang|kien\s*giang|kien\s*giang)", "An Giang"),
                     # Tây Ninh: Long An + Tây Ninh
-                    (r"(long\s*an|longan)", "Tây Ninh"),
-                    (r"(tay\s*ninh|tayninh|tây\s*ninh)", "Tây Ninh"),
+                    (r"(long\s*an|long\s*an|tay\s*ninh|tay\s*ninh)", "Tây Ninh"),
                 ]
                 
                 for pat, canon in mapping:
                     if re.search(pat, low, flags=re.IGNORECASE):
                         return canon
                 
-                # Only return if it's a recognizable Mekong Delta province
-                # Otherwise return empty to avoid polluting province filter
-                return ""
+                # If no match found in this field, continue to next field instead of returning empty
     
+    # All fields checked, no province found
     return ""
 # =========================================================
 # API xác thực (Auth)
@@ -563,8 +572,8 @@ def add_item(obj_type):
             # Xử lý ảnh upload (nếu có)
             if 'images' in request.files:
                 files = request.files.getlist('images')
-                province_folder = secure_filename(province).lower().replace(' ', '_') if province else ""
-                item_folder = secure_filename(item_name).lower().replace(' ', '_') if item_name else ""
+                province_folder = remove_vietnamese_marks(province) if province else "unknown"
+                item_folder = remove_vietnamese_marks(item_name) if item_name else ""
                 upload_dir = os.path.join("uploads", "images", province_folder, obj_type if obj_type != "places" else "places", item_folder)
                 os.makedirs(upload_dir, exist_ok=True)
                 
@@ -582,9 +591,9 @@ def add_item(obj_type):
                         next_number += 1
                         # Lưu đường dẫn relative từ uploads folder
                         if province:
-                            province_folder = secure_filename(province).lower().replace(' ', '_')
+                            province_folder = remove_vietnamese_marks(province)
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 if obj_type == "places":
                                     relative_path = f"images/{province_folder}/places/{item_folder}/{filename}"
                                 else:
@@ -596,7 +605,7 @@ def add_item(obj_type):
                                     relative_path = f"images/{province_folder}/{obj_type}/{filename}"
                         else:
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 relative_path = f"images/{obj_type}/{item_folder}/{filename}"
                             else:
                                 relative_path = f"images/{obj_type}/{filename}"
@@ -605,8 +614,8 @@ def add_item(obj_type):
             # Xử lý video upload (nếu có)
             if 'videos' in request.files:
                 files = request.files.getlist('videos')
-                province_folder = secure_filename(province).lower().replace(' ', '_') if province else ""
-                item_folder = secure_filename(item_name).lower().replace(' ', '_') if item_name else ""
+                province_folder = remove_vietnamese_marks(province) if province else ""
+                item_folder = remove_vietnamese_marks(item_name) if item_name else ""
                 upload_dir = os.path.join("uploads", "videos", province_folder, obj_type if obj_type != "places" else "places", item_folder)
                 os.makedirs(upload_dir, exist_ok=True)
                 
@@ -624,9 +633,9 @@ def add_item(obj_type):
                         next_number += 1
                         # Lưu đường dẫn relative từ uploads folder
                         if province:
-                            province_folder = secure_filename(province).lower().replace(' ', '_')
+                            province_folder = remove_vietnamese_marks(province)
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 if obj_type == "places":
                                     relative_path = f"videos/{province_folder}/places/{item_folder}/{filename}"
                                 else:
@@ -638,7 +647,7 @@ def add_item(obj_type):
                                     relative_path = f"videos/{province_folder}/{obj_type}/{filename}"
                         else:
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 relative_path = f"videos/{obj_type}/{item_folder}/{filename}"
                             else:
                                 relative_path = f"videos/{obj_type}/{filename}"
@@ -647,8 +656,8 @@ def add_item(obj_type):
             # Xử lý audio upload (nếu có)
             if 'audios' in request.files:
                 files = request.files.getlist('audios')
-                province_folder = secure_filename(province).lower().replace(' ', '_') if province else ""
-                item_folder = secure_filename(item_name).lower().replace(' ', '_') if item_name else ""
+                province_folder = remove_vietnamese_marks(province) if province else ""
+                item_folder = remove_vietnamese_marks(item_name) if item_name else ""
                 upload_dir = os.path.join("uploads", "audio", province_folder, obj_type if obj_type != "places" else "places", item_folder)
                 os.makedirs(upload_dir, exist_ok=True)
                 
@@ -666,9 +675,9 @@ def add_item(obj_type):
                         next_number += 1
                         # Lưu đường dẫn relative từ uploads folder
                         if province:
-                            province_folder = secure_filename(province).lower().replace(' ', '_')
+                            province_folder = remove_vietnamese_marks(province)
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 if obj_type == "places":
                                     relative_path = f"audio/{province_folder}/places/{item_folder}/{filename}"
                                 else:
@@ -680,7 +689,7 @@ def add_item(obj_type):
                                     relative_path = f"audio/{province_folder}/{obj_type}/{filename}"
                         else:
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 relative_path = f"audio/{obj_type}/{item_folder}/{filename}"
                             else:
                                 relative_path = f"audio/{obj_type}/{filename}"
@@ -845,8 +854,8 @@ def update_item(obj_type, item_id):
 
             if 'images' in request.files:
                 files = request.files.getlist('images')
-                province_folder = secure_filename(province).lower().replace(' ', '_') if province else ""
-                item_folder = secure_filename(item_name).lower().replace(' ', '_') if item_name else ""
+                province_folder = remove_vietnamese_marks(province) if province else ""
+                item_folder = remove_vietnamese_marks(item_name) if item_name else ""
                 upload_dir = os.path.join("uploads", "images", province_folder, obj_type if obj_type != "places" else "places", item_folder)
                 os.makedirs(upload_dir, exist_ok=True)
                 
@@ -864,9 +873,9 @@ def update_item(obj_type, item_id):
                         next_number += 1
                         # Lưu đường dẫn relative
                         if province:
-                            province_folder = secure_filename(province).lower().replace(' ', '_')
+                            province_folder = remove_vietnamese_marks(province)
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 if obj_type == "places":
                                     relative_path = f"images/{province_folder}/places/{item_folder}/{filename}"
                                 else:
@@ -878,7 +887,7 @@ def update_item(obj_type, item_id):
                                     relative_path = f"images/{province_folder}/{obj_type}/{filename}"
                         else:
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 relative_path = f"images/{obj_type}/{item_folder}/{filename}"
                             else:
                                 relative_path = f"images/{obj_type}/{filename}"
@@ -887,8 +896,8 @@ def update_item(obj_type, item_id):
             # Xử lý video upload (nếu có)
             if 'videos' in request.files:
                 files = request.files.getlist('videos')
-                province_folder = secure_filename(province).lower().replace(' ', '_') if province else ""
-                item_folder = secure_filename(item_name).lower().replace(' ', '_') if item_name else ""
+                province_folder = remove_vietnamese_marks(province) if province else ""
+                item_folder = remove_vietnamese_marks(item_name) if item_name else ""
                 upload_dir = os.path.join("uploads", "videos", province_folder, obj_type if obj_type != "places" else "places", item_folder)
                 os.makedirs(upload_dir, exist_ok=True)
                 
@@ -906,9 +915,9 @@ def update_item(obj_type, item_id):
                         next_number += 1
                         # Lưu đường dẫn relative
                         if province:
-                            province_folder = secure_filename(province).lower().replace(' ', '_')
+                            province_folder = remove_vietnamese_marks(province)
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 if obj_type == "places":
                                     relative_path = f"videos/{province_folder}/places/{item_folder}/{filename}"
                                 else:
@@ -920,7 +929,7 @@ def update_item(obj_type, item_id):
                                     relative_path = f"videos/{province_folder}/{obj_type}/{filename}"
                         else:
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 relative_path = f"videos/{obj_type}/{item_folder}/{filename}"
                             else:
                                 relative_path = f"videos/{obj_type}/{filename}"
@@ -929,8 +938,8 @@ def update_item(obj_type, item_id):
             # Xử lý audio upload (nếu có)
             if 'audios' in request.files:
                 files = request.files.getlist('audios')
-                province_folder = secure_filename(province).lower().replace(' ', '_') if province else ""
-                item_folder = secure_filename(item_name).lower().replace(' ', '_') if item_name else ""
+                province_folder = remove_vietnamese_marks(province) if province else ""
+                item_folder = remove_vietnamese_marks(item_name) if item_name else ""
                 upload_dir = os.path.join("uploads", "audio", province_folder, obj_type if obj_type != "places" else "places", item_folder)
                 os.makedirs(upload_dir, exist_ok=True)
                 
@@ -948,9 +957,9 @@ def update_item(obj_type, item_id):
                         next_number += 1
                         # Lưu đường dẫn relative
                         if province:
-                            province_folder = secure_filename(province).lower().replace(' ', '_')
+                            province_folder = remove_vietnamese_marks(province)
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 if obj_type == "places":
                                     relative_path = f"audio/{province_folder}/places/{item_folder}/{filename}"
                                 else:
@@ -962,7 +971,7 @@ def update_item(obj_type, item_id):
                                     relative_path = f"audio/{province_folder}/{obj_type}/{filename}"
                         else:
                             if item_name:
-                                item_folder = secure_filename(item_name).lower().replace(' ', '_')
+                                item_folder = remove_vietnamese_marks(item_name)
                                 relative_path = f"audio/{obj_type}/{item_folder}/{filename}"
                             else:
                                 relative_path = f"audio/{obj_type}/{filename}"
