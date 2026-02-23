@@ -120,6 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🔹 Xem chi tiết
 function viewDetail(id) {
+  // Lưu tab hiện tại vào sessionStorage trước khi chuyển trang
+  sessionStorage.setItem('lastListTab', currentType);
   window.location.href = `/detail.html?id=${id}`;
 }
 
@@ -131,6 +133,8 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
       .forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     currentType = btn.getAttribute("data-type");
+    // Lưu tab được chọn vào sessionStorage
+    sessionStorage.setItem('lastListTab', currentType);
     loadData(currentType);
   });
 });
@@ -159,8 +163,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// 🔹 Tải mặc định
-document.addEventListener("DOMContentLoaded", () => loadData());
+// 🔹 Tải mặc định hoặc tab đã lưu
+document.addEventListener("DOMContentLoaded", () => {
+  // Khôi phục tab từ sessionStorage nếu có
+  const lastTab = sessionStorage.getItem('lastListTab');
+  if (lastTab) {
+    currentType = lastTab;
+    // Highlight button tương ứng
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.classList.remove("active");
+      if (btn.getAttribute("data-type") === lastTab) {
+        btn.classList.add("active");
+      }
+    });
+  }
+  loadData(currentType);
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   const headers = document.querySelectorAll(".main-header, .admin-header");

@@ -20,6 +20,8 @@ function toggleFields() {
 // Chuyển tab
 function switchTab(type) {
   currentType = type;
+  // Lưu tab vào localStorage để giữ lại khi reload
+  localStorage.setItem('lastAdminTab', type);
   const titleMap = {
     artifacts: "Cổ vật",
     events: "Sự kiện",
@@ -325,6 +327,18 @@ async function checkAuth() {
   const data = await res.json();
   if (!data.logged_in) window.location.href = "/login.html";
   else {
+    // Khôi phục tab từ localStorage nếu có
+    const lastTab = localStorage.getItem('lastAdminTab');
+    if (lastTab && ['artifacts', 'events', 'places'].includes(lastTab)) {
+      currentType = lastTab;
+    }
+    // Cập nhật tiêu đề
+    const titleMap = {
+      artifacts: "Cổ vật",
+      events: "Sự kiện",
+      places: "Di tích"
+    };
+    document.getElementById("adminTitle").innerText = `Quản lý ${titleMap[currentType]}`;
     toggleFields();
     loadList();
     setupImagePreview();
