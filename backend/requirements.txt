@@ -4,3 +4,9 @@ pymongo
 werkzeug
 bcrypt
 python-dotenv
+torch
+torchvision
+transformers
+pillow
+numpy
+pymongo

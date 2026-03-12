@@ -12,12 +12,21 @@
 <body>
     <header class="main-header">
         <div class="logo" id="headerToggle">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ</div>
-        <nav>
-            <a href="/index.html">Trang chủ</a>
-            <a href="/index.html#timeline">Dòng thời gian</a>
-            <a href="/index.html#map">Bản đồ</a>
-            <a href="/index.html#artifacts">Hiện vật</a>
-            <a href="/list.html">Liệt kê</a>
+        <nav class="main-nav" id="mainNav">
+            <button id="navMenuBtn" class="nav-menu-btn" type="button" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="navDrawer">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-drawer" id="navDrawer">
+                <button id="navCloseBtn" class="nav-close-btn" type="button" aria-label="Đóng menu">&times;</button>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật</a>
+                <a href="/list.html#gioi-thieu">Giới thiệu</a>
+                <a href="/list.html">Liệt kê</a>
+            </div>
         </nav>
     </header>
 
@@ -25,9 +34,31 @@
         <h1 class="page-title">DANH SÁCH DỮ LIỆU</h1>
 
         <!-- 🔍 Thanh tìm kiếm -->
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm theo tên, mô tả..." />
-            <button id="searchBtn">Tìm kiếm</button>
+        <div class="search-box-wrap">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm theo tên, mô tả..." />
+                <label for="searchImageInput" class="list-image-label" aria-label="Chọn ảnh" title="Chọn ảnh">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="list-action-icon">
+                        <path d="M8 6l1.2-2h5.6L16 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2Z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                    </svg>
+                </label>
+                <input id="searchImageInput" type="file" accept="image/*" />
+                <button id="searchBtn" aria-label="Tìm" title="Tìm">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="list-action-icon search-icon-lg">
+                        <circle cx="11" cy="11" r="6" />
+                        <path d="M20 20l-4.2-4.2" />
+                    </svg>
+                </button>
+            </div>
+            <div id="listSearchImagePreview" class="list-search-image-preview" aria-live="polite">
+                <div class="list-search-thumb-wrap">
+                    <img id="listSearchImageThumb" alt="Ảnh tìm kiếm" />
+                    <button id="removeSearchImage" type="button" class="list-remove-image" aria-label="Bỏ ảnh">&times;</button>
+                </div>
+                <p id="listSearchImageName" class="list-search-image-name"></p>
+            </div>
+            <div id="listSearchStatus" class="list-search-status"></div>
         </div>
 
         <!-- Bộ lọc theo tỉnh -->
@@ -50,6 +81,54 @@
             <p>Đang tải dữ liệu...</p>
         </div>
     </main>
+
+    <section id="gioi-thieu" class="contact-footer">
+        <div class="contact-footer-inner">
+            <div class="contact-col contact-brand">
+                <h3>🏛️ MuseMap - Bảo Tàng Số Tây Nam Bộ</h3>
+                <p>
+                    Nền tảng số hóa và quản lý dữ liệu về lịch sử, di tích, sự kiện và các hiện vật văn hóa tiêu biểu của vùng Tây Nam Bộ,
+                    hỗ trợ lưu trữ, tra cứu và tìm kiếm đa phương tiện (văn bản, hình ảnh), góp phần bảo tồn và lan tỏa giá trị di sản văn
+                    hóa đến cộng đồng trong môi trường số.
+                </p>
+            </div>
+
+            <div class="contact-col contact-links">
+                <h3>Khám Phá</h3>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/list.html#gioi-thieu">Giới thiệu</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật nổi bật</a>
+                <a href="/list.html">Liệt kê dữ liệu</a>
+            </div>
+
+            <div class="contact-col contact-info">
+                <h3>Liên Hệ</h3>
+                <p>Email: thanhtuyen.1201.2k4@gmail.com</p>
+                <p>Hotline: 0355898648</p>
+                <p>Địa chỉ: Cần Thơ, Việt Nam</p>
+                <div class="contact-socials">
+                    <a href="https://www.facebook.com/thanh.tuyen.654345" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M13.5 21v-7h2.4l.4-3h-2.8V9.2c0-.9.3-1.5 1.6-1.5H16V5.1c-.5-.1-1.4-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2V11H7v3h2.5v7h4Z" fill="currentColor" />
+                        </svg>
+                    </a>
+                    <a href="mailto:thanhtuyen.1201.2k4@gmail.com" aria-label="Email" title="Email">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5v-9Zm1.6.2 6 4.8a.6.6 0 0 0 .8 0l6-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                    <a href="https://zalo.me/0355898648" target="_blank" rel="noopener noreferrer" aria-label="Zalo" title="Zalo">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 7.5A2.5 2.5 0 0 1 8.5 5h7A2.5 2.5 0 0 1 18 7.5v5A2.5 2.5 0 0 1 15.5 15H12l-3.5 3v-3H8.5A2.5 2.5 0 0 1 6 12.5v-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                            <path d="M9 8.8h5.8L9.8 13.2H15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <footer class="site-footer">
         © 🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ

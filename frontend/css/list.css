@@ -100,37 +100,144 @@ body {
 /* ===============================
    Thanh tìm kiếm
    =============================== */
+.search-box-wrap {
+    max-width: 980px;
+    margin: 0 auto 18px;
+}
+
 .search-box {
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 8px;
 }
 
 .search-box input {
-    width: 60%;
-    max-width: 480px;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #A67B5B;
-    background: #FAF9F6;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 52px;
+    padding: 0 18px;
+    border-radius: 10px;
+    border: 1px solid #d8c6ae;
+    background: #fbf9f4;
     color: #2B2B2B;
+    font-size: 1.03rem;
 }
 
-.search-box button {
-    padding: 10px 15px;
+.search-box input:focus {
+    outline: none;
+    border-color: #a67b5b;
+    box-shadow: 0 0 0 3px rgba(166, 123, 91, 0.14);
+}
+
+#searchImageInput {
+    display: none;
+}
+
+.list-image-label,
+#searchBtn {
+    width: 56px;
+    height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
-    background: #A67B5B;
-    color: #FAF9F6;
     border-radius: 8px;
+    background: #cdb080;
+    color: #5c4033;
     cursor: pointer;
-    font-weight: 600;
-    transition: background 0.3s;
+    transition: background 0.2s ease;
+    padding: 0;
 }
 
-.search-box button:hover {
+#searchBtn {
+    background: #a67b5b;
+    color: #fff7ee;
+}
+
+.list-image-label:hover {
+    background: #c19f6f;
+}
+
+#searchBtn:hover {
     background: #8B5A3C;
+}
+
+.list-action-icon {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.search-icon-lg {
+    width: 26px;
+    height: 26px;
+}
+
+.list-search-image-preview {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin: 10px auto 0;
+    background: #f5ece0;
+    border: 1px solid #dbc3a4;
+    border-radius: 10px;
+    padding: 8px;
+    width: fit-content;
+    max-width: 360px;
+}
+
+.list-search-image-preview.active {
+    display: flex;
+}
+
+.list-search-thumb-wrap {
+    position: relative;
+    width: 62px;
+    height: 62px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.list-search-thumb-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.list-remove-image {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(40, 40, 40, 0.85);
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.list-search-image-name {
+    margin: 0;
+    color: #5c4033;
+    font-size: 15px;
+    line-height: 1.35;
+    max-width: 250px;
+    word-break: break-word;
+}
+
+.list-search-status {
+    min-height: 22px;
+    margin-top: 8px;
+    color: #6a4028;
+    font-size: 14px;
 }
 
 /* ===============================
@@ -235,8 +342,19 @@ body {
    Responsive
    =============================== */
 @media (max-width: 768px) {
+    .search-box {
+        gap: 6px;
+    }
+
+    .list-image-label,
+    #searchBtn {
+        width: 48px;
+        height: 46px;
+    }
+
     .search-box input {
-        width: 70%;
+        height: 46px;
+        padding: 0 14px;
     }
 
     .data-grid {
@@ -259,8 +377,12 @@ body {
         font-size: 14px;
     }
 
+    .search-box-wrap {
+        margin-bottom: 14px;
+    }
+
     .search-box input {
-        width: 80%;
+        font-size: 0.96rem;
     }
 }
 

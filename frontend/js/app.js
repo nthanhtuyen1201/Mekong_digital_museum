@@ -81,18 +81,175 @@ function scrollToSection(id) {
 // 🔍 TÌM KIẾM — GỌI API VÀ HIỂN THỊ KẾT QUẢ
 // =========================================
 async function handleSearch(e) {
-  // Chỉ chạy khi nhấn Enter
   if (e.key !== 'Enter') return;
+  await performSearch();
+}
 
-  const query = e.target.value.trim();
-  if (!query) return;
+async function performSearch() {
+  const input = document.getElementById('searchInput');
+  const imageInput = document.getElementById('searchImageInput');
+  const status = document.getElementById('searchStatus');
+  const text = (input?.value || '').trim();
+  const imageFile = imageInput?.files?.[0];
 
-  // Gọi API tìm kiếm
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  const data = await res.json();
+  if (!text && !imageFile) {
+    if (status) status.textContent = 'Nhập từ khóa hoặc chọn ảnh để tìm kiếm.';
+    renderSearchResults([]);
+    return;
+  }
 
-  // Render kết quả ra giao diện
-  renderSearchResults(data);
+  if (status) status.textContent = 'Đang tìm kiếm...';
+
+  try {
+    let data = [];
+
+    if (text && !imageFile) {
+      const formData = new FormData();
+      formData.append('text', text);
+
+      const [keywordRes, embeddingRes] = await Promise.allSettled([
+        fetch(`/api/search?q=${encodeURIComponent(text)}`),
+        fetch('/search', { method: 'POST', body: formData })
+      ]);
+
+      const keywordData = await parseSearchResponse(keywordRes);
+      const embeddingData = await parseSearchResponse(embeddingRes);
+      data = mergeSearchResults(keywordData, embeddingData);
+    } else if (imageFile && !text) {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const res = await fetch('/search', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Search request failed');
+      data = await res.json();
+    } else {
+      const textFormData = new FormData();
+      textFormData.append('text', text);
+      
+      const imageFormData = new FormData();
+      imageFormData.append('text', text);
+      imageFormData.append('image', imageFile);
+
+      const [keywordRes, textEmbedRes, imageFusionRes] = await Promise.allSettled([
+        fetch(`/api/search?q=${encodeURIComponent(text)}`),
+        fetch('/search', { method: 'POST', body: textFormData }),
+        fetch('/search', { method: 'POST', body: imageFormData })
+      ]);
+
+      const keywordData = await parseSearchResponse(keywordRes);
+      const textEmbedData = await parseSearchResponse(textEmbedRes);
+      const imageFusionData = await parseSearchResponse(imageFusionRes);
+
+      const merged = new Map();
+      
+      (keywordData || []).forEach(item => {
+        if (!item?.id) return;
+        merged.set(item.id, { ...item, mode: 'keyword' });
+      });
+      
+      (textEmbedData || []).forEach(item => {
+        if (!item?.id) return;
+        const existing = merged.get(item.id);
+        if (!existing) {
+          merged.set(item.id, { ...item, mode: 'text' });
+        } else {
+          merged.set(item.id, { ...existing, mode: 'keyword+text' });
+        }
+      });
+      
+      (imageFusionData || []).forEach(item => {
+        if (!item?.id) return;
+        const existing = merged.get(item.id);
+        if (!existing) {
+          merged.set(item.id, { ...item, mode: 'image' });
+        } else {
+          const mode = existing.mode;
+          if (mode === 'keyword' || mode === 'keyword+text') {
+            merged.set(item.id, { ...existing, mode: `${mode}+image` });
+          } else {
+            merged.set(item.id, { ...existing, mode: 'text+image' });
+          }
+        }
+      });
+
+      data = Array.from(merged.values()).sort((a, b) => {
+        const modePriority = (mode) => {
+          if (!mode) return 0;
+          if (mode.includes('keyword') && mode.includes('text') && mode.includes('image')) return 5;
+          if (mode.includes('keyword') && mode.includes('text')) return 4;
+          if (mode.includes('keyword')) return 3;
+          if (mode.includes('text') && mode.includes('image')) return 2;
+          return 1;
+        };
+        return modePriority(b.mode) - modePriority(a.mode);
+      });
+    }
+
+    renderSearchResults(data);
+    if (status) status.textContent = `Tìm thấy ${Array.isArray(data) ? data.length : 0} kết quả.`;
+  } catch (error) {
+    console.error(error);
+    if (status) status.textContent = 'Không thể tìm kiếm lúc này. Vui lòng thử lại.';
+    renderSearchResults([]);
+  }
+}
+
+async function parseSearchResponse(result) {
+  if (result.status !== 'fulfilled') return [];
+  const res = result.value;
+  if (!res.ok) return [];
+  try {
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeSearchResults(keywordItems, embeddingItems) {
+  const merged = new Map();
+
+  (keywordItems || []).forEach((item) => {
+    if (!item?.id) return;
+    merged.set(item.id, { ...item, mode: 'keyword' });
+  });
+
+  (embeddingItems || []).forEach((item) => {
+    if (!item?.id) return;
+    const existing = merged.get(item.id);
+    if (!existing) {
+      merged.set(item.id, item);
+      return;
+    }
+
+    merged.set(item.id, {
+      ...existing,
+      ...item,
+      mode: existing.mode === 'keyword' ? `keyword+${item.mode || 'text'}` : item.mode
+    });
+  });
+
+  return Array.from(merged.values()).sort((a, b) => {
+    const modePriority = (mode) => {
+      if (!mode) return 0;
+      if (mode === 'keyword+text') return 4;
+      if (String(mode).startsWith('keyword+')) return 3;
+      if (mode === 'keyword') return 2;
+      return 1;
+    };
+
+    const pa = modePriority(a.mode);
+    const pb = modePriority(b.mode);
+    if (pa !== pb) return pb - pa;
+
+    const sa = typeof a.score === 'number' ? a.score : -1;
+    const sb = typeof b.score === 'number' ? b.score : -1;
+    return sb - sa;
+  });
 }
 
 // 👉 Hiển thị danh sách kết quả tìm kiếm
@@ -117,16 +274,41 @@ function renderSearchResults(items) {
       artifact: 'Cổ vật'
     }[item.type] || 'Khác';
 
+    const modeLabel = {
+      text: 'Text',
+      image: 'Image',
+      fusion: 'Fusion',
+      keyword: 'Keyword',
+      'keyword+text': 'Keyword + Text'
+    }[item.mode] || 'Keyword';
+
+    const scoreText = typeof item.score === 'number' ? item.score.toFixed(3) : '--';
+    const captionText = item.caption ? `<p class="search-caption">${escapeHtml(item.caption)}</p>` : '';
+    const metaText = item.mode
+      ? `<p class="search-meta">Chế độ: ${modeLabel} | Độ khớp: ${scoreText}</p>`
+      : `<p class="search-meta">Chế độ: ${modeLabel}</p>`;
+
     card.innerHTML = `
       <img src="${imgUrl}" alt="">
       <div class="info">
         <h3>${item.name || item.title}</h3>
         <p>${typeLabel}</p>
+        ${metaText}
+        ${captionText}
         <button onclick="openDetail('${item.id}')">Xem chi tiết</button>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 // =========================================
@@ -139,9 +321,107 @@ function getImageUrl(item) {
 }
 
 // =========================================
-// 🏺 HIỂN THỊ MẪU 6 CỔ VẬT TRÊN TRANG CHỦ
+// 🏺 HIỂN THỊ HIỆN VẬT NỔI BẬT DẠNG CAROUSEL 3 THẺ
 // =========================================
-// 🏺 HIỂN THỊ MẪU 6 CỔ VẬT TRÊN TRANG CHỦ
+let artifactCarouselItems = [];
+let artifactCarouselIndex = 0;
+let artifactCarouselTimer = null;
+
+function getCircularIndex(index, length) {
+  return (index + length) % length;
+}
+
+function truncateText(text, maxLength = 120) {
+  if (!text) return 'Không có mô tả';
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function createArtifactCard(item, positionClass = '') {
+  const card = document.createElement('div');
+  card.className = `artifact-card ${positionClass}`.trim();
+  const imgUrl = getImageUrl(item);
+
+  card.innerHTML = `
+    <img src="${imgUrl}" alt="${item.name || 'Hiện vật'}">
+    <div class="info">
+      <h3>${item.name || 'Hiện vật'}</h3>
+      <p class="clamp-4">${truncateText(item.description)}</p>
+      <button onclick="openDetail('${item.id}')">Xem chi tiết</button>
+    </div>
+  `;
+
+  return card;
+}
+
+function renderArtifactDots(itemsLength, activeIndex) {
+  const dotsContainer = document.getElementById('artifactDots');
+  if (!dotsContainer) return;
+
+  dotsContainer.innerHTML = '';
+  for (let i = 0; i < itemsLength; i += 1) {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = `artifact-dot ${i === activeIndex ? 'active' : ''}`;
+    dot.setAttribute('aria-label', `Xem hiện vật ${i + 1}`);
+    dot.addEventListener('click', () => {
+      artifactCarouselIndex = i;
+      renderArtifactCarousel();
+      restartArtifactCarousel();
+    });
+    dotsContainer.appendChild(dot);
+  }
+}
+
+function renderArtifactCarousel() {
+  const track = document.getElementById('artifactCarouselTrack');
+  if (!track || !artifactCarouselItems.length) return;
+
+  const total = artifactCarouselItems.length;
+  track.innerHTML = '';
+
+  if (total === 1) {
+    track.appendChild(createArtifactCard(artifactCarouselItems[0], 'is-center'));
+    renderArtifactDots(total, 0);
+    return;
+  }
+
+  if (total === 2) {
+    track.appendChild(createArtifactCard(artifactCarouselItems[0], artifactCarouselIndex === 0 ? 'is-center' : 'is-side'));
+    track.appendChild(createArtifactCard(artifactCarouselItems[1], artifactCarouselIndex === 1 ? 'is-center' : 'is-side'));
+    renderArtifactDots(total, artifactCarouselIndex);
+    return;
+  }
+
+  const leftIndex = getCircularIndex(artifactCarouselIndex - 1, total);
+  const centerIndex = artifactCarouselIndex;
+  const rightIndex = getCircularIndex(artifactCarouselIndex + 1, total);
+
+  track.appendChild(createArtifactCard(artifactCarouselItems[leftIndex], 'is-side is-left'));
+  track.appendChild(createArtifactCard(artifactCarouselItems[centerIndex], 'is-center'));
+  track.appendChild(createArtifactCard(artifactCarouselItems[rightIndex], 'is-side is-right'));
+
+  renderArtifactDots(total, centerIndex);
+}
+
+function moveArtifactCarousel(step, restartTimer = true) {
+  if (!artifactCarouselItems.length) return;
+  artifactCarouselIndex = getCircularIndex(artifactCarouselIndex + step, artifactCarouselItems.length);
+  renderArtifactCarousel();
+  if (restartTimer) restartArtifactCarousel();
+}
+
+function startArtifactCarousel() {
+  if (artifactCarouselTimer) clearInterval(artifactCarouselTimer);
+  artifactCarouselTimer = setInterval(() => {
+    moveArtifactCarousel(1, false);
+  }, 4500);
+}
+
+function restartArtifactCarousel() {
+  if (artifactCarouselTimer) clearInterval(artifactCarouselTimer);
+  startArtifactCarousel();
+}
+
 async function loadArtifactsPreview() {
   const res = await fetch('/api/artifacts');
   const data = await res.json();
@@ -154,22 +434,33 @@ async function loadArtifactsPreview() {
     return;
   }
 
-  // Hiển thị 6 cổ vật đầu tiên
-  data.slice(0, 6).forEach(item => {
-    const imgUrl = getImageUrl(item);
-    const card = document.createElement('div');
-    card.className = 'artifact-card';
+  artifactCarouselItems = data;
+  artifactCarouselIndex = 0;
 
-    card.innerHTML = `
-      <img src="${imgUrl}" alt="${item.name}">
-      <div class="info">
-        <h3>${item.name}</h3>
-        <p class="clamp-4">${item.description ? item.description.substring(0, 120) + '...' : 'Không có mô tả'}</p>
-        <button onclick="openDetail('${item.id}')">Xem chi tiết</button>
+  grid.innerHTML = `
+    <div class="artifact-carousel-shell">
+      <button type="button" id="artifactPrevBtn" class="artifact-nav prev" aria-label="Hiện vật trước">&#10094;</button>
+      <div class="artifact-carousel-viewport" id="artifactCarouselViewport">
+        <div class="artifact-carousel-track" id="artifactCarouselTrack"></div>
       </div>
-    `;
-    grid.appendChild(card);
+      <button type="button" id="artifactNextBtn" class="artifact-nav next" aria-label="Hiện vật tiếp theo">&#10095;</button>
+    </div>
+    <div id="artifactDots" class="artifact-dots" aria-label="Điều hướng hiện vật"></div>
+  `;
+
+  document.getElementById('artifactPrevBtn')?.addEventListener('click', () => moveArtifactCarousel(-1));
+  document.getElementById('artifactNextBtn')?.addEventListener('click', () => moveArtifactCarousel(1));
+
+  const viewport = document.getElementById('artifactCarouselViewport');
+  viewport?.addEventListener('mouseenter', () => {
+    if (artifactCarouselTimer) clearInterval(artifactCarouselTimer);
   });
+  viewport?.addEventListener('mouseleave', () => {
+    startArtifactCarousel();
+  });
+
+  renderArtifactCarousel();
+  startArtifactCarousel();
 }
 
 // 👉 Mở trang chi tiết theo id
@@ -184,6 +475,113 @@ let map;
 let markers = { places: [], artifacts: [], events: [] };
 let markerCluster;
 let rawData = { places: [], artifacts: [], events: [] };
+let mapSearchMatchedIds = null;
+let mapSearchPreviewUrl = '';
+let mapSearchResultsData = [];
+// Map search popup mode: 'all' | 'first' | 'none'
+const MAP_SEARCH_POPUP_MODE = 'none';
+
+function getActiveMapType() {
+  const active = document.querySelector('.filter-btn.active');
+  return active ? active.getAttribute('data-type') : 'all';
+}
+
+function clearMapSearchImage(statusMessage = '') {
+  const imageInput = document.getElementById('mapSearchImageInput');
+  const imagePreview = document.getElementById('mapSearchImagePreview');
+  const imageThumb = document.getElementById('mapSearchImageThumb');
+  const imageName = document.getElementById('mapSearchImageName');
+  const status = document.getElementById('mapSearchStatus');
+
+  if (imageInput) imageInput.value = '';
+  if (mapSearchPreviewUrl) {
+    URL.revokeObjectURL(mapSearchPreviewUrl);
+    mapSearchPreviewUrl = '';
+  }
+  if (imageThumb) imageThumb.removeAttribute('src');
+  if (imageName) imageName.textContent = '';
+  imagePreview?.classList.remove('active');
+  if (status) status.textContent = statusMessage;
+}
+
+async function runMapSearch() {
+  const input = document.getElementById('mapSearchInput');
+  const imageInput = document.getElementById('mapSearchImageInput');
+  const status = document.getElementById('mapSearchStatus');
+  const text = (input?.value || '').trim();
+  const imageFile = imageInput?.files?.[0];
+
+  if (!text && !imageFile) {
+    mapSearchMatchedIds = null;
+    mapSearchResultsData = [];
+    if (status) status.textContent = '';
+    showFilteredMarkers(getActiveMapType());
+    return;
+  }
+
+  if (status) status.textContent = 'Đang tìm trên bản đồ...';
+
+  try {
+    let data = [];
+
+    if (text && !imageFile) {
+      const formData = new FormData();
+      formData.append('text', text);
+      const [keywordRes, embeddingRes] = await Promise.allSettled([
+        fetch(`/api/search?q=${encodeURIComponent(text)}`),
+        fetch('/search', { method: 'POST', body: formData })
+      ]);
+      const keywordData = await parseSearchResponse(keywordRes);
+      const embeddingData = await parseSearchResponse(embeddingRes);
+      data = mergeSearchResults(keywordData, embeddingData);
+    } else {
+      const formData = new FormData();
+      if (text) formData.append('text', text);
+      if (imageFile) formData.append('image', imageFile);
+      const res = await fetch('/search', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Map search request failed');
+      const payload = await res.json();
+      data = Array.isArray(payload) ? payload : [];
+    }
+
+    const enriched = await enrichMapSearchResults(data || []);
+    mapSearchResultsData = enriched;
+    mapSearchMatchedIds = new Set(enriched.map((item) => item?.id).filter(Boolean));
+    if (status) status.textContent = `Tìm thấy ${mapSearchMatchedIds.size} kết quả trên bản đồ.`;
+    showFilteredMarkers(getActiveMapType());
+  } catch (error) {
+    console.error(error);
+    mapSearchMatchedIds = new Set();
+    mapSearchResultsData = [];
+    if (status) status.textContent = 'Không thể tìm kiếm bản đồ lúc này.';
+    showFilteredMarkers(getActiveMapType());
+  }
+}
+
+async function enrichMapSearchResults(items) {
+  const list = Array.isArray(items) ? items : [];
+  const enriched = await Promise.all(list.map(async (item) => {
+    if (!item || !item.id) return item;
+
+    const hasLatLng = item.lat !== undefined && item.lng !== undefined && item.lat !== null && item.lng !== null;
+    if (hasLatLng) return item;
+
+    try {
+      const res = await fetch(`/api/item/${encodeURIComponent(item.id)}`);
+      if (!res.ok) return item;
+      const detail = await res.json();
+      return {
+        ...item,
+        ...detail,
+        type: item.type || detail.type
+      };
+    } catch {
+      return item;
+    }
+  }));
+
+  return enriched;
+}
 
 // Normalize province names to post-merge Mekong-Delta units
 function extractProvinceFromText(text) {
@@ -307,19 +705,53 @@ function populateMapProvinceFilter() {
   const searchBtn = document.getElementById('mapSearchBtn');
   const clearBtn = document.getElementById('mapClearBtn');
   const input = document.getElementById('mapSearchInput');
+  const imageInput = document.getElementById('mapSearchImageInput');
+  const imagePreview = document.getElementById('mapSearchImagePreview');
+  const imageThumb = document.getElementById('mapSearchImageThumb');
+  const imageName = document.getElementById('mapSearchImageName');
+  const removeImageBtn = document.getElementById('mapRemoveSearchImage');
+  const status = document.getElementById('mapSearchStatus');
+
   if (searchBtn) searchBtn.addEventListener('click', () => {
-    const active = document.querySelector('.filter-btn.active');
-    const type = active ? active.getAttribute('data-type') : 'all';
-    showFilteredMarkers(type || 'all');
+    runMapSearch();
   });
+
   if (clearBtn) clearBtn.addEventListener('click', () => {
     if (input) input.value = '';
     if (sel) sel.value = '';
-    const active = document.querySelector('.filter-btn.active');
-    const type = active ? active.getAttribute('data-type') : 'all';
-    showFilteredMarkers(type || 'all');
+    mapSearchMatchedIds = null;
+    mapSearchResultsData = [];
+    clearMapSearchImage('');
+    if (status) status.textContent = '';
+    showFilteredMarkers(getActiveMapType());
   });
+
   if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') { searchBtn?.click(); } });
+
+  if (removeImageBtn) {
+    removeImageBtn.addEventListener('click', () => {
+      clearMapSearchImage('Đã bỏ ảnh tìm kiếm bản đồ.');
+    });
+  }
+
+  if (imageInput) {
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files?.[0];
+      if (!file) {
+        clearMapSearchImage('');
+        return;
+      }
+
+      if (mapSearchPreviewUrl) {
+        URL.revokeObjectURL(mapSearchPreviewUrl);
+      }
+      mapSearchPreviewUrl = URL.createObjectURL(file);
+      if (imageThumb) imageThumb.src = mapSearchPreviewUrl;
+      if (imageName) imageName.textContent = file.name;
+      imagePreview?.classList.add('active');
+      if (status) status.textContent = `Đã chọn ảnh: ${file.name}`;
+    });
+  }
 }
 
 // -------------------------
@@ -343,7 +775,7 @@ async function loadPlaceMarkers() {
           ${pl.description ? `<p>${pl.description.slice(0, 100)}...</p>` : ''}
           <button onclick="openDetail('${pl.id}')" class="popup-btn">Xem chi tiết</button>
         </div>`;
-      markers.places.push(L.marker([pl.lat, pl.lng]).bindPopup(popup));
+      markers.places.push(L.marker([pl.lat, pl.lng]).bindPopup(popup, { autoClose: false, closeOnClick: false }));
     }
   });
 }
@@ -379,7 +811,7 @@ async function loadArtifactMarkers() {
           ${art.description ? `<p>${art.description.slice(0, 100)}...</p>` : ''}
           <button onclick="openDetail('${art.id}')" class="popup-btn" style="background:#f39c12;">Xem chi tiết</button>
         </div>`;
-      markers.artifacts.push(L.marker([art.lat, art.lng], { icon: artifactIcon }).bindPopup(popup));
+      markers.artifacts.push(L.marker([art.lat, art.lng], { icon: artifactIcon }).bindPopup(popup, { autoClose: false, closeOnClick: false }));
     }
   });
 }
@@ -412,7 +844,7 @@ async function loadEventMarkers() {
           <p><strong>Địa điểm:</strong> ${ev.location || ''}</p>
           <button onclick="openDetail('${ev.id}')" class="popup-btn" style="background:#e74c3c;">Xem chi tiết</button>
         </div>`;
-      markers.events.push(L.marker([ev.lat, ev.lng], { icon: eventIcon }).bindPopup(popup));
+      markers.events.push(L.marker([ev.lat, ev.lng], { icon: eventIcon }).bindPopup(popup, { autoClose: false, closeOnClick: false }));
     }
   });
 }
@@ -420,9 +852,10 @@ async function loadEventMarkers() {
 // 👉 Hiển thị marker theo loại (lọc)
 function showFilteredMarkers(filterType) {
   const selectedProvince = document.getElementById('mapProvinceFilter')?.value || '';
-  const textFilter = (document.getElementById('mapSearchInput')?.value || '').trim().toLowerCase();
   if (markerCluster) map.removeLayer(markerCluster);
 
+  const isSearchMode = mapSearchMatchedIds !== null;
+  // Always use cluster so matched locations are shown clearly as symbols/clusters on map.
   markerCluster = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50 });
 
   let visibleMarkers = [];
@@ -435,9 +868,8 @@ function showFilteredMarkers(filterType) {
       if (selectedProvince && item) {
         if ((item.province || '').toLowerCase() !== selectedProvince.toLowerCase()) return;
       }
-      if (textFilter && item) {
-        const hay = [item.name, item.location, item.description, item.era, item.museum, item.title].filter(Boolean).join(' ').toLowerCase();
-        if (!hay.includes(textFilter)) return;
+      if (mapSearchMatchedIds !== null) {
+        if (!item?.id || !mapSearchMatchedIds.has(item.id)) return;
       }
       markerCluster.addLayer(marker);
       visibleMarkers.push(marker);
@@ -450,12 +882,55 @@ function showFilteredMarkers(filterType) {
   if (filterType === 'all' || filterType === 'artifacts') addMarkers(markers.artifacts, rawData.artifacts);
   if (filterType === 'all' || filterType === 'events') addMarkers(markers.events, rawData.events);
 
+  // Fallback: if no prebuilt marker matched, create markers directly from enriched search results.
+  if (isSearchMode && visibleMarkers.length === 0 && Array.isArray(mapSearchResultsData) && mapSearchResultsData.length) {
+    mapSearchResultsData.forEach((item) => {
+      if (!item) return;
+      const itemType = item.type;
+      if (filterType === 'places' && itemType !== 'place') return;
+      if (filterType === 'artifacts' && itemType !== 'artifact') return;
+      if (filterType === 'events' && itemType !== 'event') return;
+
+      const lat = Number(item.lat);
+      const lng = Number(item.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      if (selectedProvince && (item.province || '').toLowerCase() !== selectedProvince.toLowerCase()) return;
+
+      const popup = `
+        <div class="map-popup">
+          <h3>${item.name || item.title || 'Không rõ tên'}</h3>
+          <p><strong>Loại:</strong> ${itemType || 'Khác'}</p>
+          ${item.province ? `<p><strong>Tỉnh:</strong> ${item.province}</p>` : ''}
+          <button onclick="openDetail('${item.id}')" class="popup-btn">Xem chi tiết</button>
+        </div>`;
+      const marker = L.marker([lat, lng]).bindPopup(popup, { autoClose: false, closeOnClick: false });
+      markerCluster.addLayer(marker);
+      visibleMarkers.push(marker);
+    });
+    count = visibleMarkers.length;
+  }
+
   map.addLayer(markerCluster);
   document.getElementById('mapCounter').textContent = `Hiển thị: ${count} địa điểm`;
 
   if (visibleMarkers.length) {
     const group = new L.featureGroup(visibleMarkers);
     map.fitBounds(group.getBounds().pad(0.1));
+
+    // If this render comes from search results, open popups based on configured mode.
+    if (isSearchMode) {
+      if (MAP_SEARCH_POPUP_MODE === 'first') {
+        const first = visibleMarkers[0];
+        if (first) first.openPopup();
+      } else if (MAP_SEARCH_POPUP_MODE === 'all') {
+        visibleMarkers.forEach((marker, idx) => {
+          if (marker) {
+            setTimeout(() => marker.openPopup(), 80 * idx);
+          }
+        });
+      }
+    }
   } else {
       // Nếu chưa có marker nào thì tự set về vùng Tây Nam Bộ
       map.setView([9.8, 105.1], 8); // trung tâm Hậu Giang - zoom vừa
@@ -740,6 +1215,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let hideTimeout;
 
+    function isDrawerOpen() {
+      const nav = header.querySelector(".main-nav");
+      return !!(nav && nav.classList.contains("open"));
+    }
+
     // Hiện header, ẩn icon
     function showHeader() {
       header.classList.remove("hidden");
@@ -748,6 +1228,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Ẩn header, hiện icon
     function hideHeader() {
+      if (isDrawerOpen()) return;
       header.classList.add("hidden");
       icon.classList.add("visible");
     }
@@ -756,14 +1237,18 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("scroll", () => {
       clearTimeout(hideTimeout);
       showHeader();
-      hideTimeout = setTimeout(hideHeader, 5000); // ẩn sau 5s dừng cuộn
+      hideTimeout = setTimeout(() => {
+        if (!isDrawerOpen()) hideHeader();
+      }, 5000); // ẩn sau 5s dừng cuộn
     });
 
     // Khi click icon → hiện header
     icon.addEventListener("click", showHeader);
 
     // ✅ Ẩn header sau 5 giây kể từ khi load trang (nếu không thao tác gì)
-    hideTimeout = setTimeout(hideHeader, 5000);
+    hideTimeout = setTimeout(() => {
+      if (!isDrawerOpen()) hideHeader();
+    }, 5000);
   });
 });
 
@@ -815,6 +1300,58 @@ document.querySelectorAll("#search-hints button").forEach(btn => {
 });
 
 // ------------------------------
+// ☰ MENU 3 GẠCH CHO HEADER TRANG CHỦ
+// ------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  const mainNav = document.getElementById("mainNav");
+  const menuBtn = document.getElementById("navMenuBtn");
+  const closeBtn = document.getElementById("navCloseBtn");
+  const drawer = document.getElementById("navDrawer");
+
+  if (!mainNav || !menuBtn || !closeBtn || !drawer) return;
+
+  const closeMenu = () => {
+    mainNav.classList.remove("open");
+    menuBtn.setAttribute("aria-expanded", "false");
+  };
+
+  const openMenu = () => {
+    mainNav.classList.add("open");
+    menuBtn.setAttribute("aria-expanded", "true");
+  };
+
+  const isMenuOpen = () => mainNav.classList.contains("open");
+
+  menuBtn.addEventListener("click", () => {
+    if (mainNav.classList.contains("open")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
+
+  closeBtn.addEventListener("click", closeMenu);
+
+  drawer.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", closeMenu);
+  });
+
+  // Close drawer when clicking outside the menu panel.
+  document.addEventListener("click", (event) => {
+    if (!isMenuOpen()) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+
+    const clickedInsideDrawer = drawer.contains(target);
+    const clickedMenuBtn = menuBtn.contains(target);
+
+    if (!clickedInsideDrawer && !clickedMenuBtn) {
+      closeMenu();
+    }
+  });
+});
+
+// ------------------------------
 // 🔍 MODAL TÌM KIẾM TRÊN HEADER
 // ------------------------------
 document.addEventListener("DOMContentLoaded", () => {
@@ -822,6 +1359,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const openBtn = document.getElementById("openSearchModal");
   const closeBtn = modal.querySelector(".close-btn");
   const input = document.getElementById("searchInput");
+  const searchBtn = document.getElementById("searchBtnModal");
+  const imageInput = document.getElementById("searchImageInput");
+  const imagePreview = document.getElementById("searchImagePreview");
+  const imageThumb = document.getElementById("searchImageThumb");
+  const imageName = document.getElementById("searchImageName");
+  const removeImageBtn = document.getElementById("removeSearchImage");
+  const status = document.getElementById("searchStatus");
+  let previewUrl = "";
+
+  function clearSelectedImage(message = "") {
+    if (imageInput) imageInput.value = "";
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrl = "";
+    }
+    if (imageThumb) imageThumb.removeAttribute("src");
+    if (imageName) imageName.textContent = "";
+    imagePreview?.classList.remove("active");
+    if (status) status.textContent = message;
+  }
 
   // mở modal
   openBtn.addEventListener("click", (e) => {
@@ -836,13 +1393,46 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === modal) modal.style.display = "none";
   });
 
+  if (searchBtn) {
+    searchBtn.addEventListener("click", () => {
+      performSearch();
+    });
+  }
+
+  if (removeImageBtn) {
+    removeImageBtn.addEventListener("click", () => {
+      clearSelectedImage("Đã bỏ ảnh tìm kiếm.");
+    });
+  }
+
+  if (imageInput) {
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files?.[0];
+      if (!file) {
+        clearSelectedImage("");
+        return;
+      }
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      previewUrl = URL.createObjectURL(file);
+
+      if (imageThumb) imageThumb.src = previewUrl;
+      if (imageName) imageName.textContent = file.name;
+      imagePreview?.classList.add("active");
+      if (status) {
+        status.textContent = `Đã chọn ảnh: ${file.name}`;
+      }
+    });
+  }
+
   // xử lý gợi ý
   document.querySelectorAll(".search-suggestions button").forEach((btn) => {
     btn.addEventListener("click", () => {
       const text = btn.textContent.trim();
       input.value = text;
-      const event = new KeyboardEvent("keypress", { key: "Enter" });
-      input.dispatchEvent(event);
+      performSearch();
     });
   });
 });

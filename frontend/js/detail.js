@@ -623,6 +623,54 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+  const mainNav = document.getElementById("mainNav");
+  const menuBtn = document.getElementById("navMenuBtn");
+  const closeBtn = document.getElementById("navCloseBtn");
+  const drawer = document.getElementById("navDrawer");
+
+  if (!mainNav || !menuBtn || !closeBtn || !drawer) return;
+
+  const closeMenu = () => {
+    mainNav.classList.remove("open");
+    menuBtn.setAttribute("aria-expanded", "false");
+  };
+
+  const openMenu = () => {
+    mainNav.classList.add("open");
+    menuBtn.setAttribute("aria-expanded", "true");
+  };
+
+  const isMenuOpen = () => mainNav.classList.contains("open");
+
+  menuBtn.addEventListener("click", () => {
+    if (isMenuOpen()) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
+
+  closeBtn.addEventListener("click", closeMenu);
+
+  drawer.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", closeMenu);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!isMenuOpen()) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+
+    const clickedInsideDrawer = drawer.contains(target);
+    const clickedMenuBtn = menuBtn.contains(target);
+
+    if (!clickedInsideDrawer && !clickedMenuBtn) {
+      closeMenu();
+    }
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
   const headers = document.querySelectorAll(".main-header, .admin-header");
 
   headers.forEach(header => {
@@ -633,6 +681,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let hideTimeout;
 
+    function isDrawerOpen() {
+      const nav = header.querySelector(".main-nav");
+      return !!(nav && nav.classList.contains("open"));
+    }
+
     // Hiện header, ẩn icon
     function showHeader() {
       header.classList.remove("hidden");
@@ -641,6 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Ẩn header, hiện icon
     function hideHeader() {
+      if (isDrawerOpen()) return;
       header.classList.add("hidden");
       icon.classList.add("visible");
     }
@@ -649,14 +703,18 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("scroll", () => {
       clearTimeout(hideTimeout);
       showHeader();
-      hideTimeout = setTimeout(hideHeader, 5000); // ẩn sau 5s dừng cuộn
+      hideTimeout = setTimeout(() => {
+        if (!isDrawerOpen()) hideHeader();
+      }, 5000); // ẩn sau 5s dừng cuộn
     });
 
     // Khi click icon → hiện header
     icon.addEventListener("click", showHeader);
 
     // ✅ Ẩn header sau 5 giây kể từ khi load trang (nếu không thao tác gì)
-    hideTimeout = setTimeout(hideHeader, 5000);
+    hideTimeout = setTimeout(() => {
+      if (!isDrawerOpen()) hideHeader();
+    }, 5000);
   });
 });
 

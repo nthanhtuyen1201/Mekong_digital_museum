@@ -20,3 +20,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# ML model artifacts
+backend/model/*.pt

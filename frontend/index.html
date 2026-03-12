@@ -14,13 +14,22 @@
 <body>
     <header class="main-header">
         <div class="logo" id="headerToggle">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ</div>
-        <nav>
-            <a href="/index.html">Trang chủ</a>
-            <a href="/index.html#timeline">Dòng thời gian</a>
-            <a href="/index.html#map">Bản đồ</a>
-            <a href="/index.html#artifacts">Hiện vật</a>
-            <a href="/list.html">Liệt kê</a>
-            <a href="#" id="openSearchModal">Tìm kiếm</a>
+        <nav class="main-nav" id="mainNav">
+            <button id="navMenuBtn" class="nav-menu-btn" type="button" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="navDrawer">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-drawer" id="navDrawer">
+                <button id="navCloseBtn" class="nav-close-btn" type="button" aria-label="Đóng menu">&times;</button>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật</a>
+                <a href="/index.html#gioi-thieu">Giới thiệu</a>
+                <a href="/list.html">Liệt kê</a>
+                <a href="#" id="openSearchModal">Tìm kiếm</a>
+            </div>
         </nav>
     </header>
 
@@ -30,15 +39,42 @@
         <div class="search-modal-content">
             <span class="close-btn">&times;</span>
             <h2>Tìm kiếm</h2>
-            <input id="searchInput" placeholder="🔍 Tìm bảo tàng, di tích, sự kiện hay cổ vật..."
-                onkeypress="handleSearch(event)" />
-    
-            <div class="search-suggestions">
-                <button>Chiến thắng Ấp Bắc</button>
-                <button>Bảo tàng An Giang</button>
-                <button>Tượng Brahma Giồng Xoài</button>
-                <button>Văn hóa Óc Eo</button>
-                <button>Cần Thơ</button>
+            <div class="modal-search-bar">
+                <input id="searchInput" placeholder="Tìm bảo tàng, di tích, sự kiện hay cổ vật..."
+                    onkeypress="handleSearch(event)" />
+                <label for="searchImageInput" class="modal-image-label" aria-label="Chọn ảnh" title="Chọn ảnh">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="modal-action-icon">
+                        <path d="M8 6l1.2-2h5.6L16 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2Z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                    </svg>
+                </label>
+                <input id="searchImageInput" type="file" accept="image/*" />
+                <button id="searchBtnModal" type="button" aria-label="Tìm kiếm" title="Tìm kiếm">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="modal-action-icon">
+                        <circle cx="11" cy="11" r="6" />
+                        <path d="M20 20l-4.2-4.2" />
+                    </svg>
+                </button>
+            </div>
+            <div id="searchImagePreview" class="search-image-preview" aria-live="polite">
+                <div class="search-image-thumb-wrap">
+                    <img id="searchImageThumb" alt="Ảnh đã chọn" />
+                    <button id="removeSearchImage" type="button" class="remove-search-image" aria-label="Bỏ ảnh">&times;</button>
+                </div>
+                <p id="searchImageName" class="search-image-name"></p>
+            </div>
+            <div id="searchStatus" class="search-status"></div>
+
+            <div class="search-suggestions-block">
+                <div class="search-suggestions-title">Gợi ý:</div>
+                <div class="search-suggestions">
+                    <button>Chiến thắng Ấp Bắc</button>
+                    <button>Bảo tàng An Giang</button>
+                    <button>Tượng Brahma Giồng Xoài</button>
+                    <button>Văn hóa Óc Eo</button>
+                    <button>Cần Thơ</button>
+                    <button>ngôi chùa Khmer màu vàng với kiến trúc truyền thống</button>
+                </div>
             </div>
     
             <div id="searchResults" class="search-results"></div>
@@ -155,16 +191,46 @@
                 <span id="mapCounter">Hiển thị: 0 địa điểm</span>
             </div>
         </div>
-        <div style="margin:8px 0;">
-            <label for="mapProvinceFilter">Lọc theo tỉnh:</label>
-            <select id="mapProvinceFilter">
-                <option value="">Tất cả</option>
-            </select>
-            <!-- Map search box -->
-            <div class="map-search">
-                <input id="mapSearchInput" placeholder="Tìm tên, địa điểm, mô tả..." />
-                <button id="mapSearchBtn">Tìm</button>
-                <button id="mapClearBtn" title="Xóa bộ lọc">Reset</button>
+        <div class="map-filter-search-row">
+            <div class="map-province-filter">
+                <label for="mapProvinceFilter">Lọc theo tỉnh:</label>
+                <select id="mapProvinceFilter">
+                    <option value="">Tất cả</option>
+                </select>
+            </div>
+            <div class="map-search-wrap">
+                <div class="map-search">
+                    <input id="mapSearchInput" placeholder="Tìm tên, địa điểm, mô tả..." />
+                    <label for="mapSearchImageInput" class="map-image-label" aria-label="Chọn ảnh" title="Chọn ảnh">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="map-image-icon">
+                            <path d="M8 6l1.2-2h5.6L16 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2Z" />
+                            <circle cx="12" cy="12" r="3.5" />
+                        </svg>
+                    </label>
+                    <input id="mapSearchImageInput" type="file" accept="image/*" />
+                    <button id="mapSearchBtn" aria-label="Tìm" title="Tìm">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="map-action-icon">
+                            <circle cx="11" cy="11" r="6" />
+                            <path d="M20 20l-4.2-4.2" />
+                        </svg>
+                    </button>
+                    <button id="mapClearBtn" aria-label="Reset" title="Reset">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="map-action-icon">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                            <polyline points="21 3 21 8 16 8" />
+                            <polyline points="3 21 3 16 8 16" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="mapSearchImagePreview" class="map-search-image-preview" aria-live="polite">
+                    <div class="map-search-thumb-wrap">
+                        <img id="mapSearchImageThumb" alt="Ảnh tìm trên bản đồ" />
+                        <button id="mapRemoveSearchImage" type="button" class="map-remove-image" aria-label="Bỏ ảnh">&times;</button>
+                    </div>
+                    <p id="mapSearchImageName" class="map-search-image-name"></p>
+                </div>
+                <div id="mapSearchStatus" class="map-search-status"></div>
             </div>
         </div>
     
@@ -183,6 +249,54 @@
             <h2>Hiện vật nổi bật</h2>
             <div class="title-underline"></div>
             <div id="artifactGrid" class="grid"></div>
+        </div>
+    </section>
+
+    <section id="gioi-thieu" class="contact-footer">
+        <div class="contact-footer-inner">
+            <div class="contact-col contact-brand">
+                <h3>🏛️ MuseMap - Bảo Tàng Số Tây Nam Bộ</h3>
+                <p>
+                    Nền tảng số hóa và quản lý dữ liệu về lịch sử, di tích, sự kiện và các hiện vật văn hóa tiêu biểu của vùng Tây Nam Bộ,
+                    hỗ trợ lưu trữ, tra cứu và tìm kiếm đa phương tiện (văn bản, hình ảnh), góp phần bảo tồn và lan tỏa giá trị di sản văn
+                    hóa đến cộng đồng trong môi trường số.
+                </p>
+            </div>
+
+            <div class="contact-col contact-links">
+                <h3>Khám Phá</h3>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/index.html#gioi-thieu">Giới thiệu</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật nổi bật</a>
+                <a href="/list.html">Liệt kê dữ liệu</a>
+            </div>
+
+            <div class="contact-col contact-info">
+                <h3>Liên Hệ</h3>
+                <p>Email: thanhtuyen.1201.2k4@gmail.com</p>
+                <p>Hotline: 0355898648</p>
+                <p>Địa chỉ: Cần Thơ, Việt Nam</p>
+                <div class="contact-socials">
+                    <a href="https://www.facebook.com/thanh.tuyen.654345" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M13.5 21v-7h2.4l.4-3h-2.8V9.2c0-.9.3-1.5 1.6-1.5H16V5.1c-.5-.1-1.4-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2V11H7v3h2.5v7h4Z" fill="currentColor" />
+                        </svg>
+                    </a>
+                    <a href="mailto:thanhtuyen.1201.2k4@gmail.com" aria-label="Email" title="Email">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5v-9Zm1.6.2 6 4.8a.6.6 0 0 0 .8 0l6-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                    <a href="https://zalo.me/0355898648" target="_blank" rel="noopener noreferrer" aria-label="Zalo" title="Zalo">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 7.5A2.5 2.5 0 0 1 8.5 5h7A2.5 2.5 0 0 1 18 7.5v5A2.5 2.5 0 0 1 15.5 15H12l-3.5 3v-3H8.5A2.5 2.5 0 0 1 6 12.5v-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                            <path d="M9 8.8h5.8L9.8 13.2H15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
         </div>
     </section>
 

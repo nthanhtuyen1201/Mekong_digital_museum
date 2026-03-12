@@ -12,12 +12,21 @@
 <body>
     <header class="main-header">
         <div class="logo" id="headerToggle">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ</div>
-        <nav>
-            <a href="/index.html">Trang chủ</a>
-            <a href="/index.html#timeline">Dòng thời gian</a>
-            <a href="/index.html#map">Bản đồ</a>
-            <a href="/index.html#artifacts">Hiện vật</a>
-            <a href="/list.html">Liệt kê</a>
+        <nav class="main-nav" id="mainNav">
+            <button id="navMenuBtn" class="nav-menu-btn" type="button" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="navDrawer">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-drawer" id="navDrawer">
+                <button id="navCloseBtn" class="nav-close-btn" type="button" aria-label="Đóng menu">&times;</button>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật</a>
+                <a href="/index.html#gioi-thieu">Giới thiệu</a>
+                <a href="/list.html">Liệt kê</a>
+            </div>
         </nav>
     </header>
 
