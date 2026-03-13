@@ -520,7 +520,7 @@ def search_api():
         query_img_emb=query_img,
         query_text_emb=query_text,
         k=5,
-        score_threshold=0.8
+        score_threshold=0.7
     )
 
     final_results = []
@@ -612,7 +612,7 @@ def search_api():
 #         query_img_emb=query_img,
 #         query_text_emb=query_text,
 #         k=5,
-#         score_threshold=0.8
+#         score_threshold=0.7
 #     )
 
 

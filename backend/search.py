@@ -63,7 +63,7 @@ def filter_best_per_object(results):
 # SEARCH FUNCTION
 # ===============================
 
-def search(query_img_emb=None, query_text_emb=None, alpha=0.8, k=5, score_threshold=0.8):
+def search(query_img_emb=None, query_text_emb=None, alpha=0.8, k=5, score_threshold=0.7):
 
 
     # =========================================
