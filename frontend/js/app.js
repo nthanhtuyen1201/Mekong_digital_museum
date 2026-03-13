@@ -127,66 +127,18 @@ async function performSearch() {
       if (!res.ok) throw new Error('Search request failed');
       data = await res.json();
     } else {
-      const textFormData = new FormData();
-      textFormData.append('text', text);
-      
-      const imageFormData = new FormData();
-      imageFormData.append('text', text);
-      imageFormData.append('image', imageFile);
+      const fusionFormData = new FormData();
+      fusionFormData.append('text', text);
+      fusionFormData.append('image', imageFile);
 
-      const [keywordRes, textEmbedRes, imageFusionRes] = await Promise.allSettled([
+      const [keywordRes, fusionRes] = await Promise.allSettled([
         fetch(`/api/search?q=${encodeURIComponent(text)}`),
-        fetch('/api/search', { method: 'POST', body: textFormData }),
-        fetch('/api/search', { method: 'POST', body: imageFormData })
+        fetch('/api/search', { method: 'POST', body: fusionFormData })
       ]);
 
       const keywordData = await parseSearchResponse(keywordRes);
-      const textEmbedData = await parseSearchResponse(textEmbedRes);
-      const imageFusionData = await parseSearchResponse(imageFusionRes);
-
-      const merged = new Map();
-      
-      (keywordData || []).forEach(item => {
-        if (!item?.id) return;
-        merged.set(item.id, { ...item, mode: 'keyword' });
-      });
-      
-      (textEmbedData || []).forEach(item => {
-        if (!item?.id) return;
-        const existing = merged.get(item.id);
-        if (!existing) {
-          merged.set(item.id, { ...item, mode: 'text' });
-        } else {
-          merged.set(item.id, { ...existing, mode: 'keyword+text' });
-        }
-      });
-      
-      (imageFusionData || []).forEach(item => {
-        if (!item?.id) return;
-        const existing = merged.get(item.id);
-        if (!existing) {
-          merged.set(item.id, { ...item, mode: 'image' });
-        } else {
-          const mode = existing.mode;
-          if (mode === 'keyword' || mode === 'keyword+text') {
-            merged.set(item.id, { ...existing, mode: `${mode}+image` });
-          } else {
-            merged.set(item.id, { ...existing, mode: 'text+image' });
-          }
-        }
-      });
-
-      data = Array.from(merged.values()).sort((a, b) => {
-        const modePriority = (mode) => {
-          if (!mode) return 0;
-          if (mode.includes('keyword') && mode.includes('text') && mode.includes('image')) return 5;
-          if (mode.includes('keyword') && mode.includes('text')) return 4;
-          if (mode.includes('keyword')) return 3;
-          if (mode.includes('text') && mode.includes('image')) return 2;
-          return 1;
-        };
-        return modePriority(b.mode) - modePriority(a.mode);
-      });
+      const fusionData = await parseSearchResponse(fusionRes);
+      data = mergeKeywordWithAiResults(keywordData, fusionData, 'fusion');
     }
 
     renderSearchResults(data);
@@ -215,7 +167,7 @@ function mergeSearchResults(keywordItems, embeddingItems) {
 
   (keywordItems || []).forEach((item) => {
     if (!item?.id) return;
-    merged.set(item.id, { ...item, mode: 'keyword' });
+    merged.set(item.id, { ...item, mode: 'keyword', score: 1.0 });
   });
 
   (embeddingItems || []).forEach((item) => {
@@ -252,6 +204,48 @@ function mergeSearchResults(keywordItems, embeddingItems) {
   });
 }
 
+function mergeKeywordWithAiResults(keywordItems, aiItems, aiMode = 'fusion') {
+  const merged = new Map();
+
+  (keywordItems || []).forEach((item) => {
+    if (!item?.id) return;
+    merged.set(item.id, { ...item, mode: 'keyword', score: 1.0 });
+  });
+
+  (aiItems || []).forEach((item) => {
+    if (!item?.id) return;
+    const existing = merged.get(item.id);
+    if (!existing) {
+      merged.set(item.id, item);
+      return;
+    }
+
+    merged.set(item.id, {
+      ...existing,
+      ...item,
+      mode: `keyword+${aiMode}`
+    });
+  });
+
+  return Array.from(merged.values()).sort((a, b) => {
+    const modePriority = (mode) => {
+      if (!mode) return 0;
+      if (mode === 'keyword+fusion') return 4;
+      if (mode === 'fusion') return 3;
+      if (mode === 'keyword') return 2;
+      return 1;
+    };
+
+    const pa = modePriority(a.mode);
+    const pb = modePriority(b.mode);
+    if (pa !== pb) return pb - pa;
+
+    const sa = typeof a.score === 'number' ? a.score : -1;
+    const sb = typeof b.score === 'number' ? b.score : -1;
+    return sb - sa;
+  });
+}
+
 // 👉 Hiển thị danh sách kết quả tìm kiếm
 function renderSearchResults(items) {
   const container = document.getElementById('searchResults');
@@ -274,17 +268,16 @@ function renderSearchResults(items) {
       artifact: 'Cổ vật'
     }[item.type] || 'Khác';
 
-    const modeLabel = {
+      const modeLabel = {
       text: 'Text',
       image: 'Image',
       fusion: 'Fusion',
       keyword: 'Keyword',
-      'keyword+text': 'Keyword + Text'
+      'keyword+text': 'Keyword + Text',
+      'keyword+fusion': 'Keyword + Image+Text'
     }[item.mode] || 'Keyword';
 
-    const scoreText = typeof item.score === 'number' ? item.score.toFixed(3) : '--';
-    const shouldShowCaption = Boolean(item.caption) && item.mode !== 'text' && item.mode !== 'keyword+text';
-    const captionText = shouldShowCaption ? `<p class="search-caption">${escapeHtml(item.caption)}</p>` : '';
+    const scoreText = typeof item.score === 'number' ? item.score.toFixed(2) : '--';
     const metaText = item.mode
       ? `<p class="search-meta">Chế độ: ${modeLabel} | Độ khớp: ${scoreText}</p>`
       : `<p class="search-meta">Chế độ: ${modeLabel}</p>`;
@@ -295,7 +288,6 @@ function renderSearchResults(items) {
         <h3>${item.name || item.title}</h3>
         <p>${typeLabel}</p>
         ${metaText}
-        ${captionText}
         <button onclick="openDetail('${item.id}')">Xem chi tiết</button>
       </div>
     `;
@@ -539,10 +531,21 @@ async function runMapSearch() {
       const formData = new FormData();
       if (text) formData.append('text', text);
       if (imageFile) formData.append('image', imageFile);
-      const res = await fetch('/api/search', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Map search request failed');
-      const payload = await res.json();
-      data = Array.isArray(payload) ? payload : [];
+
+      if (text && imageFile) {
+        const [keywordRes, fusionRes] = await Promise.allSettled([
+          fetch(`/api/search?q=${encodeURIComponent(text)}`),
+          fetch('/api/search', { method: 'POST', body: formData })
+        ]);
+        const keywordData = await parseSearchResponse(keywordRes);
+        const fusionData = await parseSearchResponse(fusionRes);
+        data = mergeKeywordWithAiResults(keywordData, fusionData, 'fusion');
+      } else {
+        const res = await fetch('/api/search', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Map search request failed');
+        const payload = await res.json();
+        data = Array.isArray(payload) ? payload : [];
+      }
     }
 
     const enriched = await enrichMapSearchResults(data || []);
@@ -1361,12 +1364,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeBtn = modal.querySelector(".close-btn");
   const input = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtnModal");
+  const clearBtn = document.getElementById("searchClearBtn");
   const imageInput = document.getElementById("searchImageInput");
   const imagePreview = document.getElementById("searchImagePreview");
   const imageThumb = document.getElementById("searchImageThumb");
   const imageName = document.getElementById("searchImageName");
   const removeImageBtn = document.getElementById("removeSearchImage");
   const status = document.getElementById("searchStatus");
+  const results = document.getElementById("searchResults");
   let previewUrl = "";
 
   function clearSelectedImage(message = "") {
@@ -1397,6 +1402,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchBtn) {
     searchBtn.addEventListener("click", () => {
       performSearch();
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      if (input) input.value = "";
+      clearSelectedImage("");
+      if (status) status.textContent = "";
+      if (results) results.innerHTML = "";
     });
   }
 

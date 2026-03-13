@@ -460,6 +460,7 @@ def search_api():
     if request.method == "GET":
         q_raw = request.args.get("q", "").strip()
         q = q_raw.lower()
+        q_norm = remove_vietnamese_marks(q_raw).replace("_", " ").lower().strip()
 
         if not q:
             return jsonify([])
@@ -474,10 +475,24 @@ def search_api():
                 name_field = (item.get("name") or item.get("title") or "").lower()
                 address = (item.get("address") or "").lower()
                 province = (item.get("province") or "").lower()
+                description = (item.get("description") or "").lower()
+                era = str(item.get("era") or "").lower()
+                address_after = (item.get("address_after") or "").lower()
+                date = str(item.get("date") or "").lower()
 
-                haystack = " ".join([name_field,address,province])
+                haystack = " ".join([
+                    name_field,
+                    address,
+                    province,
+                    description,
+                    era,
+                    address_after,
+                    date
+                ])
 
-                if q in haystack:
+                haystack_norm = remove_vietnamese_marks(haystack).replace("_", " ")
+
+                if q in haystack or (q_norm and q_norm in haystack_norm):
                     result_item = item.copy()
                     result_item["type"] = collection_name[:-1]
                     results.append(result_item)
