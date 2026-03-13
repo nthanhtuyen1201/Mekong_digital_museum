@@ -452,69 +452,54 @@ def get_item(item_id):
 # SEARCH API
 # ==============================
 
-@app.route("/api/search")
-def search_string_api():
-    q_raw = request.args.get("q", "").strip()
-    q = q_raw.lower()
-    if not q:
-        return jsonify([])
-
-    results = []
-    collections = ["artifacts", "events", "places"]
-
-    for collection_name in collections:
-        items = mongo_utils.find_all(collection_name)
-        for item in items:
-            # Tên (name/title)
-            name_field = (item.get("name") or item.get("title") or "").lower()
-            # Địa chỉ
-            address = (item.get("address") or "").lower()
-            # Tỉnh/thành
-            province = (item.get("province") or "").lower()
-            # Năm hoặc thời kỳ (era / year / time)
-            era = str(item.get("era", "")).lower()
-            year = str(item.get("year", "")).lower()
-            time_field = str(item.get("time", "")).lower()
-
-            # Từ khóa loại
-            if collection_name == "artifacts":
-                type_tokens = "artifact cổ vật hiện vật"
-            elif collection_name == "events":
-                type_tokens = "event sự kiện"
-            else:
-                type_tokens = "place di tích di tich địa điểm dia diem bảo tàng bao tang"
-
-            haystack = " ".join([name_field, address, province, era, year, time_field, type_tokens]).strip()
-
-            if q in haystack:
-                result_item = item.copy()
-                result_item["type"] = collection_name[:-1]
-                results.append(result_item)
-
-    return jsonify(results)
-
-
-@app.route("/search", methods=["POST"])
+# Trên server sử dụng code này k sử dụng 2 code dưới
+@app.route("/api/search", methods=["GET","POST"])
 def search_api():
+
+    # ===== KEYWORD SEARCH =====
+    if request.method == "GET":
+        q_raw = request.args.get("q", "").strip()
+        q = q_raw.lower()
+
+        if not q:
+            return jsonify([])
+
+        results = []
+        collections = ["artifacts","events","places"]
+
+        for collection_name in collections:
+            items = mongo_utils.find_all(collection_name)
+
+            for item in items:
+                name_field = (item.get("name") or item.get("title") or "").lower()
+                address = (item.get("address") or "").lower()
+                province = (item.get("province") or "").lower()
+
+                haystack = " ".join([name_field,address,province])
+
+                if q in haystack:
+                    result_item = item.copy()
+                    result_item["type"] = collection_name[:-1]
+                    results.append(result_item)
+
+        return jsonify(results)
+
+
+    # ===== AI SEARCH =====
     text = request.form.get("text")
     image = request.files.get("image")
 
     query_img = None
     query_text = None
 
-
-    # encode image
     if image:
         query_img = encode_image(image)
 
-
-    # encode text
     if text and text.strip() != "":
         query_text = encode_text(text)
 
     if query_img is None and query_text is None:
         return jsonify([])
-
 
     results = search(
         query_img_emb=query_img,
@@ -523,16 +508,12 @@ def search_api():
         score_threshold=0.8
     )
 
-
     final_results = []
 
     for r in results:
 
-        # Get full object info from DB
         info = get_object_info(r["object_id"])
 
-        # Fallback for image/fusion when object_id from embedding path
-        # is different from id stored in MongoDB.
         if not info and "image" in r:
             info = get_object_info_by_image(r["image"])
 
@@ -540,16 +521,112 @@ def search_api():
             result_item = dict(info)
             result_item["score"] = r["score"]
             result_item["mode"] = r["mode"]
-            
-            # Add caption if from text search
+
             if r["mode"] == "text" and "caption" in r:
                 result_item["caption"] = r["caption"]
 
             final_results.append(result_item)
-        else:
-            final_results.append(r)
 
     return jsonify(final_results)
+
+# @app.route("/api/search")
+# def search_string_api():
+#     q_raw = request.args.get("q", "").strip()
+#     q = q_raw.lower()
+#     if not q:
+#         return jsonify([])
+
+#     results = []
+#     collections = ["artifacts", "events", "places"]
+
+#     for collection_name in collections:
+#         items = mongo_utils.find_all(collection_name)
+#         for item in items:
+#             # Tên (name/title)
+#             name_field = (item.get("name") or item.get("title") or "").lower()
+#             # Địa chỉ
+#             address = (item.get("address") or "").lower()
+#             # Tỉnh/thành
+#             province = (item.get("province") or "").lower()
+#             # Năm hoặc thời kỳ (era / year / time)
+#             era = str(item.get("era", "")).lower()
+#             year = str(item.get("year", "")).lower()
+#             time_field = str(item.get("time", "")).lower()
+
+#             # Từ khóa loại
+#             if collection_name == "artifacts":
+#                 type_tokens = "artifact cổ vật hiện vật"
+#             elif collection_name == "events":
+#                 type_tokens = "event sự kiện"
+#             else:
+#                 type_tokens = "place di tích di tich địa điểm dia diem bảo tàng bao tang"
+
+#             haystack = " ".join([name_field, address, province, era, year, time_field, type_tokens]).strip()
+
+#             if q in haystack:
+#                 result_item = item.copy()
+#                 result_item["type"] = collection_name[:-1]
+#                 results.append(result_item)
+
+#     return jsonify(results)
+
+
+# @app.route("/search", methods=["POST"])
+# def search_api():
+#     text = request.form.get("text")
+#     image = request.files.get("image")
+
+#     query_img = None
+#     query_text = None
+
+
+#     # encode image
+#     if image:
+#         query_img = encode_image(image)
+
+
+#     # encode text
+#     if text and text.strip() != "":
+#         query_text = encode_text(text)
+
+#     if query_img is None and query_text is None:
+#         return jsonify([])
+
+
+#     results = search(
+#         query_img_emb=query_img,
+#         query_text_emb=query_text,
+#         k=5,
+#         score_threshold=0.8
+#     )
+
+
+#     final_results = []
+
+#     for r in results:
+
+#         # Get full object info from DB
+#         info = get_object_info(r["object_id"])
+
+#         # Fallback for image/fusion when object_id from embedding path
+#         # is different from id stored in MongoDB.
+#         if not info and "image" in r:
+#             info = get_object_info_by_image(r["image"])
+
+#         if info:
+#             result_item = dict(info)
+#             result_item["score"] = r["score"]
+#             result_item["mode"] = r["mode"]
+            
+#             # Add caption if from text search
+#             if r["mode"] == "text" and "caption" in r:
+#                 result_item["caption"] = r["caption"]
+
+#             final_results.append(result_item)
+#         else:
+#             final_results.append(r)
+
+#     return jsonify(final_results)
 
 
 

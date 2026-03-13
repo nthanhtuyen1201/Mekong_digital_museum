@@ -109,7 +109,7 @@ async function performSearch() {
 
       const [keywordRes, embeddingRes] = await Promise.allSettled([
         fetch(`/api/search?q=${encodeURIComponent(text)}`),
-        fetch('/search', { method: 'POST', body: formData })
+        fetch('/api/search', { method: 'POST', body: formData })
       ]);
 
       const keywordData = await parseSearchResponse(keywordRes);
@@ -119,7 +119,7 @@ async function performSearch() {
       const formData = new FormData();
       formData.append('image', imageFile);
 
-      const res = await fetch('/search', {
+      const res = await fetch('/api/search', {
         method: 'POST',
         body: formData
       });
@@ -136,8 +136,8 @@ async function performSearch() {
 
       const [keywordRes, textEmbedRes, imageFusionRes] = await Promise.allSettled([
         fetch(`/api/search?q=${encodeURIComponent(text)}`),
-        fetch('/search', { method: 'POST', body: textFormData }),
-        fetch('/search', { method: 'POST', body: imageFormData })
+        fetch('/api/search', { method: 'POST', body: textFormData }),
+        fetch('/api/search', { method: 'POST', body: imageFormData })
       ]);
 
       const keywordData = await parseSearchResponse(keywordRes);
@@ -283,7 +283,8 @@ function renderSearchResults(items) {
     }[item.mode] || 'Keyword';
 
     const scoreText = typeof item.score === 'number' ? item.score.toFixed(3) : '--';
-    const captionText = item.caption ? `<p class="search-caption">${escapeHtml(item.caption)}</p>` : '';
+    const shouldShowCaption = Boolean(item.caption) && item.mode !== 'text' && item.mode !== 'keyword+text';
+    const captionText = shouldShowCaption ? `<p class="search-caption">${escapeHtml(item.caption)}</p>` : '';
     const metaText = item.mode
       ? `<p class="search-meta">Chế độ: ${modeLabel} | Độ khớp: ${scoreText}</p>`
       : `<p class="search-meta">Chế độ: ${modeLabel}</p>`;
@@ -529,7 +530,7 @@ async function runMapSearch() {
       formData.append('text', text);
       const [keywordRes, embeddingRes] = await Promise.allSettled([
         fetch(`/api/search?q=${encodeURIComponent(text)}`),
-        fetch('/search', { method: 'POST', body: formData })
+        fetch('/api/search', { method: 'POST', body: formData })
       ]);
       const keywordData = await parseSearchResponse(keywordRes);
       const embeddingData = await parseSearchResponse(embeddingRes);
@@ -538,7 +539,7 @@ async function runMapSearch() {
       const formData = new FormData();
       if (text) formData.append('text', text);
       if (imageFile) formData.append('image', imageFile);
-      const res = await fetch('/search', { method: 'POST', body: formData });
+      const res = await fetch('/api/search', { method: 'POST', body: formData });
       if (!res.ok) throw new Error('Map search request failed');
       const payload = await res.json();
       data = Array.isArray(payload) ? payload : [];
