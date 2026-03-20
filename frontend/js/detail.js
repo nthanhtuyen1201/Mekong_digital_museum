@@ -3,6 +3,7 @@ const id = params.get("id");
 
 let map = null;
 let marker = null;
+let currentDetailItem = null;
 
 async function loadDetail() {
   const titleEl = document.getElementById('detail-title');
@@ -30,6 +31,8 @@ async function loadDetail() {
 }
 
 function render(item) {
+  currentDetailItem = item;
+
   const galleryMain = document.getElementById('gallery-main-img');
   const thumbsContainer = document.getElementById('gallery-thumbs');
   // User preference: hide the thumbnail strip completely — only main image + arrows remain
@@ -276,6 +279,171 @@ function render(item) {
     evCountEl.textContent = `(${item.related_events.length})`;
     renderRelatedList(item.related_events, evContainer, 6, evMoreBtn);
   }
+
+  initDetailChatbotContext(item);
+}
+
+function detectDetailItemType(item) {
+  if (item && typeof item.type === 'string' && item.type) {
+    return item.type;
+  }
+
+  const rawId = String((item && item.id) || '').toLowerCase();
+  if (rawId.startsWith('a')) return 'artifact';
+  if (rawId.startsWith('e')) return 'event';
+  if (rawId.startsWith('p')) return 'place';
+  return 'unknown';
+}
+
+function buildObjectInput(item) {
+  const type = detectDetailItemType(item);
+  const name = item.name || item.title || '';
+  const province = item.province || '';
+
+  if (type === 'event') {
+    const date = item.date || item.year || item.time || '';
+    return [type, name, province, date].join(', ');
+  }
+
+  if (type === 'artifact') {
+    const era = item.era || '';
+    return [type, name, province, era].join(', ');
+  }
+
+  if (type === 'place') {
+    const addressAfter = item.address_after || item.address || '';
+    const openHours = item.open_hours || '';
+    return [type, name, province, addressAfter, openHours].join(', ');
+  }
+
+  // Fallback for unknown data type
+  return [type, name, province].join(', ');
+}
+
+function appendChatbotMessage(role, text) {
+  const messages = document.getElementById('detailChatbotMessages');
+  if (!messages) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = role === 'user' ? 'detail-chatbot-user' : 'detail-chatbot-bot';
+  bubble.textContent = text;
+  messages.appendChild(bubble);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function triggerSendRipple(buttonElement) {
+  if (!buttonElement) return;
+  const ripple = document.createElement('span');
+  ripple.className = 'detail-send-ripple';
+  buttonElement.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+function initDetailChatbotContext(item) {
+  const messages = document.getElementById('detailChatbotMessages');
+  if (!messages) return;
+
+  const typeLabel = {
+    artifact: 'hiện vật',
+    event: 'sự kiện',
+    place: 'địa điểm'
+  }[detectDetailItemType(item)] || 'nội dung';
+
+  const title = item?.name || item?.title || 'mục này';
+  messages.innerHTML = '';
+  appendChatbotMessage('bot', `Xin chào! Mình có thể hỗ trợ thông tin về ${typeLabel} "${title}".`);
+}
+
+async function askDetailChatbot() {
+  const input = document.getElementById('detailChatbotInput');
+  const sendBtn = document.getElementById('detailChatbotSend');
+  const loading = document.getElementById('detailChatbotLoading');
+
+  if (!input || !sendBtn) return;
+
+  const question = (input.value || '').trim();
+  if (!question) return;
+
+  appendChatbotMessage('user', question);
+  input.value = '';
+  sendBtn.disabled = true;
+  
+  // Show loading indicator
+  if (loading) loading.style.display = 'flex';
+
+  try {
+    const objectInput = currentDetailItem ? buildObjectInput(currentDetailItem) : '';
+    const res = await fetch('/api/chatbot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        object_input: objectInput
+      })
+    });
+
+    // Hide loading indicator
+    if (loading) loading.style.display = 'none';
+
+    if (!res.ok) {
+      appendChatbotMessage('bot', 'Không thể kết nối chatbot lúc này.');
+      return;
+    }
+
+    const data = await res.json();
+    const answer = (data && data.answer) ? String(data.answer) : 'Mình chưa có câu trả lời phù hợp.';
+    appendChatbotMessage('bot', answer);
+  } catch (error) {
+    console.error(error);
+    // Hide loading indicator
+    if (loading) loading.style.display = 'none';
+    appendChatbotMessage('bot', 'Có lỗi xảy ra khi gửi câu hỏi.');
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+function setupDetailChatbotUI() {
+  const toggleBtn = document.getElementById('detailChatbotToggle');
+  const panel = document.getElementById('detailChatbotPanel');
+  const closeBtn = document.getElementById('detailChatbotClose');
+  const sendBtn = document.getElementById('detailChatbotSend');
+  const input = document.getElementById('detailChatbotInput');
+
+  if (!toggleBtn || !panel || !closeBtn || !sendBtn || !input) return;
+
+  const openPanel = () => {
+    panel.classList.add('open');
+    toggleBtn.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    input.focus();
+  };
+
+  const closePanel = () => {
+    panel.classList.remove('open');
+    toggleBtn.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  toggleBtn.addEventListener('click', () => {
+    if (panel.classList.contains('open')) closePanel();
+    else openPanel();
+  });
+
+  closeBtn.addEventListener('click', closePanel);
+  sendBtn.addEventListener('click', () => {
+    triggerSendRipple(sendBtn);
+    askDetailChatbot();
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      askDetailChatbot();
+    }
+  });
 }
 
 // helper to show image at index, update thumbnails and scroll into view
@@ -609,7 +777,8 @@ async function resolveReferencedPlaceNames() {
 
 // Hiệu ứng xuất hiện khi cuộn
 document.addEventListener("DOMContentLoaded", () => {
-  loadDetail(); // ✅ chỉ gọi 1 lần duy nhất
+  loadDetail(); //chỉ gọi 1 lần duy nhất
+  setupDetailChatbotUI();
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {

@@ -13,6 +13,9 @@ from encoder import encode_image, encode_text
 from search import search
 from search_utils import get_object_info, get_object_info_by_image
 
+# Lazy import for heavy modules
+chatbot_answer = None
+
 # Load biến môi trường từ file .env
 load_dotenv()
 
@@ -1266,6 +1269,76 @@ def get_image(filename):
         os.path.join(app.config["UPLOAD_FOLDER"], "images"),
         filename
     )
+
+# ===============================
+# CHATBOT
+#================================
+
+def get_chatbot_answer():
+    """Lazy load chatbot module on first call"""
+    global chatbot_answer
+    if chatbot_answer is None:
+        try:
+            from chatbot import chatbot_answer as chatbot_func
+            chatbot_answer = chatbot_func
+        except MemoryError as e:
+            print(f"ERROR: Memory error loading chatbot: {e}")
+            return None
+        except OSError as e:
+            if "paging file" in str(e).lower():
+                print(f"ERROR: Insufficient memory (paging file too small): {e}")
+                return None
+            print(f"ERROR: OS error loading chatbot: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+        except Exception as e:
+            print(f"ERROR loading chatbot: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    return chatbot_answer
+
+@app.route("/api/chatbot", methods=["POST"])
+def chatbot_api():
+    try:
+        req = request.get_json()
+
+        user_question = req.get("question", "").strip()
+        object_input = req.get("object_input", "").strip()
+
+        print("QUESTION:", user_question)
+        print("OBJECT:", object_input)
+
+        if not user_question:
+            return jsonify({
+                "answer": "Vui lòng nhập câu hỏi.",
+                "score": 0
+            })
+
+        chatbot_func = get_chatbot_answer()
+        if chatbot_func is None:
+            return jsonify({
+                "answer": "Chatbot tạm thời không khả dụng. Hệ thống bộ nhớ không đủ. Vui lòng thử lại sau.",
+                "score": 0
+            })
+
+        answer, score = chatbot_func(user_question, object_input)
+
+        return jsonify({
+            "answer": answer,
+            "score": score
+        })
+
+    except Exception as e:
+        print("ERROR:", e)
+        import traceback
+        traceback.print_exc()
+
+        return jsonify({
+            "answer": "Lỗi hệ thống, vui lòng thử lại.",
+            "score": 0
+        })
 
 # =========================================================
 # Route giao diện (Frontend)
