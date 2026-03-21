@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MuseMap - Bảo tàng Số Tây Nam Bộ</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.2/vis-timeline-graph2d.min.css" rel="stylesheet">
+</head>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.2/vis-timeline-graph2d.min.js"></script>
+
+<body>
+    <header class="main-header">
+        <div class="logo" id="headerToggle">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ</div>
+        <nav class="main-nav" id="mainNav">
+            <button id="navMenuBtn" class="nav-menu-btn" type="button" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="navDrawer">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-drawer" id="navDrawer">
+                <button id="navCloseBtn" class="nav-close-btn" type="button" aria-label="Đóng menu">&times;</button>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật</a>
+                <a href="/index.html#gioi-thieu">Giới thiệu</a>
+                <a href="/list.html">Liệt kê</a>
+                <a href="#" id="openSearchModal">Tìm kiếm</a>
+            </div>
+        </nav>
+    </header>
+
+
+    <!-- Modal tìm kiếm -->
+    <div id="searchModal" class="search-modal">
+        <div class="search-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Tìm kiếm</h2>
+            <div class="modal-search-bar">
+                <input id="searchInput" placeholder="Tìm bảo tàng, di tích, sự kiện hay cổ vật..."
+                    onkeypress="handleSearch(event)" />
+                <label for="searchImageInput" class="modal-image-label" aria-label="Chọn ảnh" title="Chọn ảnh">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="modal-action-icon">
+                        <path d="M8 6l1.2-2h5.6L16 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2Z" />
+                        <circle cx="12" cy="12" r="3.5" />
+                    </svg>
+                </label>
+                <input id="searchImageInput" type="file" accept="image/*" />
+                <button id="searchBtnModal" type="button" aria-label="Tìm kiếm" title="Tìm kiếm">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="modal-action-icon">
+                        <circle cx="11" cy="11" r="6" />
+                        <path d="M20 20l-4.2-4.2" />
+                    </svg>
+                </button>
+                <button id="searchClearBtn" type="button" aria-label="Reset" title="Reset">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="modal-action-icon">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                        <polyline points="21 3 21 8 16 8" />
+                        <polyline points="3 21 3 16 8 16" />
+                    </svg>
+                </button>
+            </div>
+            <div id="searchImagePreview" class="search-image-preview" aria-live="polite">
+                <div class="search-image-thumb-wrap">
+                    <img id="searchImageThumb" alt="Ảnh đã chọn" />
+                    <button id="removeSearchImage" type="button" class="remove-search-image" aria-label="Bỏ ảnh">&times;</button>
+                </div>
+                <p id="searchImageName" class="search-image-name"></p>
+            </div>
+            <div id="searchStatus" class="search-status"></div>
+
+            <div class="search-suggestions-block">
+                <div class="search-suggestions-title">Gợi ý:</div>
+                <div class="search-suggestions">
+                    <button>Chiến thắng Ấp Bắc</button>
+                    <button>Bảo tàng An Giang</button>
+                    <button>Tượng Brahma Giồng Xoài</button>
+                    <button>Văn hóa Óc Eo</button>
+                    <button>Cần Thơ</button>
+                    <button>ngôi chùa Khmer màu vàng với kiến trúc truyền thống</button>
+                </div>
+            </div>
+    
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    </div>
+
+    <!-- Hero slider -->
+    <section id="home" class="hero-slider">
+        <!-- Hero video slide -->
+        <div class="slide hero-video">
+            <video id="heroVideo" autoplay muted playsinline> <!-- có lôp thì để loop trước playsinline-->
+                <source src="static/video/Download.mp4" type="video/mp4" />
+                Trình duyệt của bạn không hỗ trợ video.
+            </video>
+
+            <div class="overlay"></div>
+        
+            <div class="content">
+                <h1>Kỷ niệm 80 năm Đất nước Độc lập</h1>
+                <p>Âm vang lịch sử – Tự hào Việt Nam</p>
+                <button onclick="scrollToSection('timeline')">Khám phá ngay</button>
+            </div>
+        
+            <!-- Nút bật/tắt âm thanh -->
+            <button id="muteToggleBtn" class="mute-toggle" aria-label="Tắt/Bật âm thanh">🔇</button>
+        </div>
+
+        <div class="slide active" style="background-image: url('static/img/trongdong.png')">
+            <div class="overlay"></div>
+            <div class="content">
+                <h1>Khám phá Di sản Tây Nam Bộ</h1>
+                <p>Hành trình qua những câu chuyện lịch sử và hiện vật độc đáo.</p>
+                <button onclick="scrollToSection('search')">Khám phá ngay</button>
+            </div>
+        </div>
+        <div class="slide" style="background-image: url('static/img/hero2.jpg')">
+            <div class="overlay"></div>
+            <div class="content">
+                <h1>Dòng thời gian lịch sử</h1>
+                <p>Tái hiện các mốc son hào hùng qua từng giai đoạn.</p>
+                <button onclick="scrollToSection('timeline')">Xem chi tiết</button>
+            </div>
+        </div>
+        <div class="slide" style="background-image: url('static/img/hero3.png')">
+            <div class="overlay"></div>
+            <div class="content">
+                <h1>Bản đồ tương tác</h1>
+                <p>Khám phá di tích và bảo vật trên bản đồ Tây Nam Bộ - Việt Nam.</p>
+                <button onclick="scrollToSection('map')">Khám phá bản đồ</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search -->
+    <!-- <section id="search" class="search-section">
+        <div class="search-container">
+            <input id="searchInput" placeholder="🔍 Tìm kiếm bảo tàng, di tích, sự kiện hay cổ vật..."
+                onkeypress="handleSearch(event)" />
+        </div>
+        <div id="searchResults" class="search-results"></div>
+    </section> -->
+
+    <!-- Timeline với thước đo -->
+    <section id="timeline" class="section">
+        <!-- <h2>Dòng thời gian lịch sử</h2> -->
+        <h2 class="timeline-title">
+            Dòng thời gian lịch sử
+            <button id="toggleTimelineView" class="toggle-btn" title="Chuyển chế độ">
+                <span id="toggleIcon">➜</span>
+            </button>
+        </h2>
+        <div class="title-underline"></div>
+    
+        <!-- Filter cho timeline -->
+        <div class="timeline-controls">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-timeline-filter="all">Tất cả</button>
+                <button class="filter-btn" data-timeline-filter="century">Theo thế kỷ</button>
+                <button class="filter-btn" data-timeline-filter="decade">Theo thập kỷ</button>
+                <button class="filter-btn" data-timeline-filter="year">Theo năm</button>
+            </div>
+            <div class="timeline-stats">
+                <span id="timelineCounter">Hiển thị: 0 sự kiện</span>
+            </div>
+        </div>
+    
+        <!-- Vis.js Timeline -->
+        <div class="vis-bg-full">
+            <div id="vis-timeline" class="vis-inner"></div>
+        </div>
+
+        <!-- Timeline list view (giữ lại) -->
+        <div class="timeline-list-frame">
+            <div class="timeline-list-inner">
+                <div id="timeline-container" class="timeline-inner"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- map placeholder -->
+    <section id="map" class="section">
+        <h2>Bản đồ</h2>
+        <div class="title-underline"></div>
+    
+        <!-- FILTER CONTROLS -->
+        <div class="map-controls">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-type="all">Tất cả</button>
+                <button class="filter-btn" data-type="places">Di tích</button>
+                <button class="filter-btn" data-type="artifacts">Cổ vật</button>
+                <button class="filter-btn" data-type="events">Sự kiện</button>
+            </div>
+            <div class="map-stats">
+                <span id="mapCounter">Hiển thị: 0 địa điểm</span>
+            </div>
+        </div>
+        <div class="map-filter-search-row">
+            <div class="map-province-filter">
+                <label for="mapProvinceFilter">Lọc theo tỉnh:</label>
+                <select id="mapProvinceFilter">
+                    <option value="">Tất cả</option>
+                </select>
+            </div>
+            <div class="map-search-wrap">
+                <div class="map-search">
+                    <input id="mapSearchInput" placeholder="Tìm tên, địa điểm, mô tả..." />
+                    <label for="mapSearchImageInput" class="map-image-label" aria-label="Chọn ảnh" title="Chọn ảnh">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="map-image-icon">
+                            <path d="M8 6l1.2-2h5.6L16 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2Z" />
+                            <circle cx="12" cy="12" r="3.5" />
+                        </svg>
+                    </label>
+                    <input id="mapSearchImageInput" type="file" accept="image/*" />
+                    <button id="mapSearchBtn" aria-label="Tìm" title="Tìm">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="map-action-icon">
+                            <circle cx="11" cy="11" r="6" />
+                            <path d="M20 20l-4.2-4.2" />
+                        </svg>
+                    </button>
+                    <button id="mapClearBtn" aria-label="Reset" title="Reset">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="map-action-icon">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                            <polyline points="21 3 21 8 16 8" />
+                            <polyline points="3 21 3 16 8 16" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="mapSearchImagePreview" class="map-search-image-preview" aria-live="polite">
+                    <div class="map-search-thumb-wrap">
+                        <img id="mapSearchImageThumb" alt="Ảnh tìm trên bản đồ" />
+                        <button id="mapRemoveSearchImage" type="button" class="map-remove-image" aria-label="Bỏ ảnh">&times;</button>
+                    </div>
+                    <p id="mapSearchImageName" class="map-search-image-name"></p>
+                </div>
+                <div id="mapSearchStatus" class="map-search-status"></div>
+            </div>
+        </div>
+    
+        <div id="main-map" style="height:500px;border-radius:8px;overflow:hidden;"></div>
+        <div style="margin-top:8px;font-size:14px;color:#888">
+            Chú thích:
+            <span style="color:#3a65c9">📍 Di tích/Bảo tàng</span>,
+            <span style="color:#b7812a">📍 Cổ vật</span>,
+            <span style="color:#e74c3c">📍 Sự kiện</span>
+        </div>
+    </section>
+
+    <!-- artifacts sample -->
+    <section id="artifacts">
+        <div class="section">
+            <h2>Hiện vật nổi bật</h2>
+            <div class="title-underline"></div>
+            <div id="artifactGrid" class="grid"></div>
+        </div>
+    </section>
+
+    <section id="gioi-thieu" class="contact-footer">
+        <div class="contact-footer-inner">
+            <div class="contact-col contact-brand">
+                <h3>🏛️ MuseMap - Bảo Tàng Số Tây Nam Bộ</h3>
+                <p>
+                    Nền tảng số hóa và quản lý dữ liệu về lịch sử, di tích, sự kiện và các hiện vật văn hóa tiêu biểu của vùng Tây Nam Bộ,
+                    hỗ trợ lưu trữ, tra cứu và tìm kiếm đa phương tiện (văn bản, hình ảnh), góp phần bảo tồn và lan tỏa giá trị di sản văn
+                    hóa đến cộng đồng trong môi trường số.
+                </p>
+            </div>
+
+            <div class="contact-col contact-links">
+                <h3>Khám Phá</h3>
+                <a href="/index.html">Trang chủ</a>
+                <a href="/index.html#gioi-thieu">Giới thiệu</a>
+                <a href="/index.html#timeline">Dòng thời gian</a>
+                <a href="/index.html#map">Bản đồ</a>
+                <a href="/index.html#artifacts">Hiện vật</a>
+                <a href="/list.html">Liệt kê dữ liệu</a>
+            </div>
+
+            <div class="contact-col contact-info">
+                <h3>Liên Hệ</h3>
+                <p>Email: thanhtuyen.1201.2k4@gmail.com</p>
+                <p>Hotline: 0355898648</p>
+                <p>Địa chỉ: Cần Thơ, Việt Nam</p>
+                <div class="contact-socials">
+                    <a href="https://www.facebook.com/thanh.tuyen.654345" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M13.5 21v-7h2.4l.4-3h-2.8V9.2c0-.9.3-1.5 1.6-1.5H16V5.1c-.5-.1-1.4-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2V11H7v3h2.5v7h4Z" fill="currentColor" />
+                        </svg>
+                    </a>
+                    <a href="mailto:thanhtuyen.1201.2k4@gmail.com" aria-label="Email" title="Email">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5v-9Zm1.6.2 6 4.8a.6.6 0 0 0 .8 0l6-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                    <a href="https://zalo.me/0355898648" target="_blank" rel="noopener noreferrer" aria-label="Zalo" title="Zalo">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 7.5A2.5 2.5 0 0 1 8.5 5h7A2.5 2.5 0 0 1 18 7.5v5A2.5 2.5 0 0 1 15.5 15H12l-3.5 3v-3H8.5A2.5 2.5 0 0 1 6 12.5v-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                            <path d="M9 8.8h5.8L9.8 13.2H15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        © 🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ
+    </footer>
+
+    <script src="js/app.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+</body>
+
+</html>

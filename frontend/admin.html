@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Quản trị | BẢO TÀNG SỐ TÂY NAM BỘ</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+    <header class="admin-header">
+        <div class="logo">🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ – Quản trị</div>
+        <nav>
+            <a href="#" onclick="switchTab('artifacts')">Cổ vật</a>
+            <a href="#" onclick="switchTab('events')">Sự kiện</a>
+            <a href="#" onclick="switchTab('places')">Di tích</a>
+            <button class="nav-btn nav-btn-outline admin-manage-btn" onclick="openAdminManager()">Quản lý Admin</button>
+            <button class="nav-btn nav-btn-outline" id="logoutBtn">Đăng xuất</button>
+        </nav>
+    </header>
+
+    <main class="admin-main">
+        <!-- centered search above the title -->
+        <div class="admin-search-wrapper">
+            <div class="search-box">
+                <span class="search-icon" aria-hidden="true">
+                    <!-- gold magnifier SVG -->
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z" stroke="#b8975f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 21l-4.35-4.35" stroke="#b8975f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <input id="adminSearch" type="search" placeholder="Tìm theo tên, id hoặc mô tả..." aria-label="Tìm kiếm quản trị" />
+            </div>
+        </div>
+        <h2 id="adminTitle">Quản lý Cổ vật</h2>
+        <div class="admin-actions">
+            <button onclick="showAddForm()">+ Thêm mới</button>
+        </div>
+
+        <div id="adminList" class="admin-list"></div>
+
+        <div id="adminFormModal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn" onclick="hideAddForm()">&times;</span>
+                <h3 id="formTitle">Thêm mới</h3>
+                <form id="adminForm" enctype="multipart/form-data">
+                    <input type="hidden" name="id" id="itemId" />
+                    <input type="text" name="name" id="itemName" placeholder="Tên / Tiêu đề" required />
+                    <textarea name="description" id="itemDesc" placeholder="Mô tả" rows="4"></textarea>
+
+                    <div class="form-group">
+                        <label for="itemImages">Ảnh (có thể chọn nhiều ảnh):</label>
+                        <input type="file" name="images" id="itemImages" multiple accept="image/*" />
+                        <small class="file-info">Giữ Ctrl (Windows) hoặc Command (Mac) để chọn nhiều ảnh</small>
+                        <div id="imagePreview" class="image-preview"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemVideos">Video (có thể chọn nhiều video):</label>
+                        <input type="file" name="videos" id="itemVideos" multiple accept="video/*" />
+                        <small class="file-info">Hỗ trợ: MP4, WebM, MOV, AVI. Giữ Ctrl (Windows) hoặc Command (Mac) để chọn nhiều video</small>
+                        <div id="videoPreview" class="media-preview"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemAudios">Audio (có thể chọn nhiều tệp):</label>
+                        <input type="file" name="audios" id="itemAudios" multiple accept="audio/*" />
+                        <small class="file-info">Hỗ trợ: MP3, WAV, M4A, OGG, FLAC. Giữ Ctrl (Windows) hoặc Command (Mac) để chọn nhiều tệp</small>
+                        <div id="audioPreview" class="media-preview"></div>
+                    </div>
+
+                    <input type="number" step="any" name="lat" id="itemLat" placeholder="Vĩ độ" />
+                    <input type="number" step="any" name="lng" id="itemLng" placeholder="Kinh độ" />
+
+                    <!-- 🔹 Trường dành riêng cho từng loại -->
+                    <div id="artifactFields" class="form-group-type">
+                        <input type="text" name="era" id="itemEra" placeholder="Thời kỳ / Niên đại" />
+                        <input type="text" name="museum" id="itemMuseum" placeholder="Bảo tàng (ID địa điểm)" />
+                        <input type="text" id="itemAddressArtifact" placeholder="Địa chỉ" data-field="address" />
+                        <input type="text" id="itemAddressAfterArtifact" placeholder="Địa chỉ mới sau sát nhập" data-field="address_after" />
+                        <div class="form-group">
+                            <label>Liên kết tham khảo (artifact)</label>
+                            <div id="relatedLinksList-artifacts" class="related-links-box"></div>
+                            <div class="hstack space-top">
+                                <input type="text" id="linkTitleInput-artifacts" placeholder="Tiêu đề" class="flex-1" />
+                                <input type="text" id="linkUrlInput-artifacts" placeholder="URL (https://...)" class="flex-2" />
+                                <button type="button" id="addLinkBtn-artifacts">Thêm</button>
+                                <button type="button" id="removeLinkBtn-artifacts">Xóa</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="eventFields" class="form-group-type">
+                        <input type="date" name="date" id="itemDate" />
+                        <input type="text" name="location" id="itemLocation" placeholder="Địa điểm (ID di tích)" />
+                        <input type="text" id="itemAddressEvent" placeholder="Địa chỉ" data-field="address" />
+                        <input type="text" id="itemAddressAfterEvent" placeholder="Địa chỉ mới sau sát nhập" data-field="address_after" />
+                        <div class="form-group">
+                            <label>Liên kết tham khảo (event)</label>
+                            <div id="relatedLinksList-events" class="related-links-box"></div>
+                            <div class="hstack space-top">
+                                <input type="text" id="linkTitleInput-events" placeholder="Tiêu đề" class="flex-1" />
+                                <input type="text" id="linkUrlInput-events" placeholder="URL (https://...)" class="flex-2" />
+                                <button type="button" id="addLinkBtn-events">Thêm</button>
+                                <button type="button" id="removeLinkBtn-events">Xóa</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="placeFields" class="form-group-type">
+                        <input type="text" name="type" id="itemType"
+                            placeholder="Loại địa điểm (bảo tàng, di tích...)" />
+                        <input type="text" id="itemAddressPlace" placeholder="Địa chỉ" data-field="address" />
+                        <input type="text" id="itemAddressAfterPlace" placeholder="Địa chỉ mới sau sát nhập" data-field="address_after" />
+                        <input type="text" name="open_hours" id="itemOpenHours" placeholder="Giờ mở cửa" />
+                        <!-- Related items controls -->
+                        <div class="form-group">
+                            <label for="relatedArtifactsSelect">Hiện vật liên quan</label>
+                            <select id="relatedArtifactsSelect" multiple class="select-full"></select>
+                            <small>Chọn nhiều mục bằng Ctrl/Command, hoặc nhập ID bằng nút bên dưới.</small>
+                            <div class="hstack space-top">
+                                <input type="text" id="relatedArtifactsInput" placeholder="Nhập ID (ví dụ: a000...)" />
+                                <button type="button" id="addRelatedArtifactBtn">Thêm</button>
+                                <button type="button" id="removeRelatedArtifactBtn">Xóa</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Liên kết liên quan (wiki, bài viết...)</label>
+                            <div id="relatedLinksList-places" class="related-links-box"></div>
+                            <div class="hstack space-top">
+                                <input type="text" id="linkTitleInput-places" placeholder="Tiêu đề (ví dụ: Wikipedia)" class="flex-1" />
+                                <input type="text" id="linkUrlInput-places" placeholder="URL (https://...)" class="flex-2" />
+                                <button type="button" id="addLinkBtn-places">Thêm</button>
+                                <button type="button" id="removeLinkBtn-places">Xóa</button>
+                            </div>
+                            <small>Thêm liên kết tham khảo cho địa điểm. Các liên kết sẽ được lưu vào trường <code>links</code>.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="relatedEventsSelect">Sự kiện liên quan</label>
+                            <select id="relatedEventsSelect" multiple class="select-full"></select>
+                            <small>Chọn nhiều mục bằng Ctrl/Command, hoặc nhập ID bằng nút bên dưới.</small>
+                            <div class="hstack space-top">
+                                <input type="text" id="relatedEventsInput" placeholder="Nhập ID (ví dụ: e000...)" />
+                                <button type="button" id="addRelatedEventBtn">Thêm</button>
+                                <button type="button" id="removeRelatedEventBtn">Xóa</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit">Lưu</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Quản lý Admin -->
+        <div id="adminManagerModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 700px;">
+                <span class="close-btn" onclick="closeAdminManager()">&times;</span>
+                <h3>👥 Quản lý tài khoản Admin</h3>
+                
+                <div class="admin-section">
+                    <h4>➕ Tạo Admin mới</h4>
+                    <form id="createAdminForm" class="admin-form-grid">
+                        <input type="text" id="newAdminUsername" placeholder="Username" required />
+                        <input type="password" id="newAdminPassword" placeholder="Password (tối thiểu 5 ký tự)" required />
+                        <button type="submit" class="btn-primary-green">
+                            Tạo Admin
+                        </button>
+                    </form>
+                </div>
+
+                <hr class="admin-divider" />
+
+                <div class="admin-section">
+                    <h4>📋 Danh sách Admin</h4>
+                    <div id="adminUsersList" class="admin-users-list"></div>
+                </div>
+
+                <hr class="admin-divider" />
+
+                <div class="admin-section">
+                    <h4>🔐 Đổi mật khẩu của bạn</h4>
+                    <form id="changePasswordForm" class="admin-form-grid">
+                        <input type="password" id="oldPassword" placeholder="Mật khẩu cũ" required />
+                        <input type="password" id="newPassword" placeholder="Mật khẩu mới (tối thiểu 5 ký tự)" required />
+                        <button type="submit" class="btn-primary-green">
+                            Đổi mật khẩu
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        © 🏛️ MuseMap - BẢO TÀNG SỐ TÂY NAM BỘ
+    </footer>
+
+    <script src="js/admin.js"></script>
+</body>
+
+</html>

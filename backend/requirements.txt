@@ -1,0 +1,15 @@
+flask
+flask-cors
+pymongo
+werkzeug
+bcrypt
+python-dotenv
+torch
+torchvision
+transformers
+pillow
+numpy
+pymongo
+sentence-transformers
+faiss-cpu
+peft
