@@ -304,6 +304,111 @@ function escapeHtml(text) {
     .replaceAll("'", '&#39;');
 }
 
+function appendHomeChatbotMessage(role, text) {
+  const messages = document.getElementById('homeChatbotMessages');
+  if (!messages) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = role === 'user' ? 'detail-chatbot-user' : 'detail-chatbot-bot';
+  bubble.textContent = text;
+  messages.appendChild(bubble);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function triggerHomeSendRipple(buttonElement) {
+  if (!buttonElement) return;
+  const ripple = document.createElement('span');
+  ripple.className = 'detail-send-ripple';
+  buttonElement.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+async function askHomeChatbot() {
+  const input = document.getElementById('homeChatbotInput');
+  const sendBtn = document.getElementById('homeChatbotSend');
+  const loading = document.getElementById('homeChatbotLoading');
+
+  if (!input || !sendBtn) return;
+
+  const question = (input.value || '').trim();
+  if (!question) return;
+
+  appendHomeChatbotMessage('user', question);
+  input.value = '';
+  sendBtn.disabled = true;
+  if (loading) loading.style.display = 'flex';
+
+  try {
+    const res = await fetch('/api/chatbot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question })
+    });
+
+    if (loading) loading.style.display = 'none';
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const message = (data && data.answer) ? String(data.answer) : 'Không thể kết nối chatbot lúc này.';
+      appendHomeChatbotMessage('bot', message);
+      return;
+    }
+
+    const answer = (data && data.answer) ? String(data.answer) : 'Mình chưa có câu trả lời phù hợp.';
+    appendHomeChatbotMessage('bot', answer);
+  } catch (error) {
+    console.error(error);
+    if (loading) loading.style.display = 'none';
+    appendHomeChatbotMessage('bot', 'Có lỗi xảy ra khi gửi câu hỏi.');
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+function setupHomeChatbotUI() {
+  const toggleBtn = document.getElementById('homeChatbotToggle');
+  const panel = document.getElementById('homeChatbotPanel');
+  const closeBtn = document.getElementById('homeChatbotClose');
+  const sendBtn = document.getElementById('homeChatbotSend');
+  const input = document.getElementById('homeChatbotInput');
+
+  if (!toggleBtn || !panel || !closeBtn || !sendBtn || !input) return;
+
+  const openPanel = () => {
+    panel.classList.add('open');
+    toggleBtn.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    input.focus();
+  };
+
+  const closePanel = () => {
+    panel.classList.remove('open');
+    toggleBtn.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  toggleBtn.addEventListener('click', () => {
+    if (panel.classList.contains('open')) closePanel();
+    else openPanel();
+  });
+
+  closeBtn.addEventListener('click', closePanel);
+  sendBtn.addEventListener('click', () => {
+    triggerHomeSendRipple(sendBtn);
+    askHomeChatbot();
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      askHomeChatbot();
+    }
+  });
+}
+
 // =========================================
 // 🖼️ XỬ LÝ ĐƯỜNG DẪN ẢNH — DÙNG CHUNG
 // =========================================
@@ -1464,5 +1569,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimeline();
   loadTimelineList();
   initScrollAnimations();
+  setupHomeChatbotUI();
 });
 

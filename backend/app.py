@@ -15,6 +15,7 @@ from search_utils import get_object_info, get_object_info_by_image
 
 # Lazy import for heavy modules
 chatbot_answer = None
+chatbot_last_error = None
 
 # Load biến môi trường từ file .env
 load_dotenv()
@@ -1276,70 +1277,61 @@ def get_image(filename):
 
 def get_chatbot_answer():
     """Lazy load chatbot module on first call"""
-    global chatbot_answer
+    global chatbot_answer, chatbot_last_error
     if chatbot_answer is None:
         try:
             from chatbot import chatbot_answer as chatbot_func
             chatbot_answer = chatbot_func
+            chatbot_last_error = None
         except MemoryError as e:
+            chatbot_last_error = f"MemoryError: {e}"
             print(f"ERROR: Memory error loading chatbot: {e}")
             return None
         except OSError as e:
             if "paging file" in str(e).lower():
+                chatbot_last_error = f"OSError: {e}"
                 print(f"ERROR: Insufficient memory (paging file too small): {e}")
                 return None
+            chatbot_last_error = f"OSError: {e}"
             print(f"ERROR: OS error loading chatbot: {e}")
             import traceback
             traceback.print_exc()
             return None
         except Exception as e:
+            chatbot_last_error = f"{type(e).__name__}: {e}"
             print(f"ERROR loading chatbot: {e}")
             import traceback
             traceback.print_exc()
             return None
     return chatbot_answer
 
-@app.route("/api/chatbot", methods=["POST"])
-def chatbot_api():
+@app.route('/api/chatbot', methods=['POST'])
+def api_chatbot():
+    global chatbot_last_error
     try:
-        req = request.get_json()
-
-        user_question = req.get("question", "").strip()
-        object_input = req.get("object_input", "").strip()
-
-        print("QUESTION:", user_question)
-        print("OBJECT:", object_input)
-
-        if not user_question:
-            return jsonify({
-                "answer": "Vui lòng nhập câu hỏi.",
-                "score": 0
-            })
+        data = request.get_json(silent=True) or {}
+        user_question = data.get('question', '')
 
         chatbot_func = get_chatbot_answer()
-        if chatbot_func is None:
-            return jsonify({
-                "answer": "Chatbot tạm thời không khả dụng. Hệ thống bộ nhớ không đủ. Vui lòng thử lại sau.",
-                "score": 0
-            })
 
-        answer, score = chatbot_func(user_question, object_input)
+        if chatbot_func is None:
+            detail = chatbot_last_error or "unknown"
+            return jsonify({
+                'answer': f"Chatbot đang lỗi hoặc chưa load được. ({detail})"
+            }), 500
+
+        answer = chatbot_func(user_question)
 
         return jsonify({
-            "answer": answer,
-            "score": score
+            'answer': answer
         })
 
     except Exception as e:
-        print("ERROR:", e)
-        import traceback
-        traceback.print_exc()
-
+        chatbot_last_error = f"{type(e).__name__}: {e}"
+        print(f"ERROR chatbot: {e}")
         return jsonify({
-            "answer": "Lỗi hệ thống, vui lòng thử lại.",
-            "score": 0
-        })
-
+            'answer': f"Lỗi chatbot server. ({chatbot_last_error})"
+        }), 500
 # =========================================================
 # Route giao diện (Frontend)
 # =========================================================
