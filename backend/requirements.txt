@@ -13,3 +13,4 @@ pymongo
 sentence-transformers
 faiss-cpu
 peft
+requests

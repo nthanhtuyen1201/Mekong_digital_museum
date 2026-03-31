@@ -304,6 +304,11 @@ function escapeHtml(text) {
     .replaceAll("'", '&#39;');
 }
 
+let homeChatbotReady = false;
+let homeChatbotBooting = false;
+let homeChatbotStatusTimer = null;
+let homeChatbotLoadingBubble = null;
+
 function appendHomeChatbotMessage(role, text) {
   const messages = document.getElementById('homeChatbotMessages');
   if (!messages) return;
@@ -315,12 +320,125 @@ function appendHomeChatbotMessage(role, text) {
   messages.scrollTop = messages.scrollHeight;
 }
 
+function showHomeChatbotLoadingMessage(text) {
+  const messages = document.getElementById('homeChatbotMessages');
+  if (!messages) return;
+
+  if (homeChatbotLoadingBubble && homeChatbotLoadingBubble.isConnected) {
+    homeChatbotLoadingBubble.textContent = text;
+    messages.scrollTop = messages.scrollHeight;
+    return;
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'detail-chatbot-bot';
+  bubble.textContent = text;
+  bubble.dataset.systemLoading = 'true';
+  messages.appendChild(bubble);
+  messages.scrollTop = messages.scrollHeight;
+  homeChatbotLoadingBubble = bubble;
+}
+
+function clearHomeChatbotLoadingMessage() {
+  if (homeChatbotLoadingBubble && homeChatbotLoadingBubble.isConnected) {
+    homeChatbotLoadingBubble.remove();
+  }
+  homeChatbotLoadingBubble = null;
+}
+
 function triggerHomeSendRipple(buttonElement) {
   if (!buttonElement) return;
   const ripple = document.createElement('span');
   ripple.className = 'detail-send-ripple';
   buttonElement.appendChild(ripple);
   ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+function setHomeChatbotInputEnabled(enabled) {
+  const input = document.getElementById('homeChatbotInput');
+  const sendBtn = document.getElementById('homeChatbotSend');
+  if (input) input.disabled = !enabled;
+  if (sendBtn) sendBtn.disabled = !enabled;
+}
+
+function clearHomeChatbotStatusTimer() {
+  if (homeChatbotStatusTimer) {
+    clearInterval(homeChatbotStatusTimer);
+    homeChatbotStatusTimer = null;
+  }
+}
+
+async function checkHomeChatbotStatus() {
+  const loading = document.getElementById('homeChatbotLoading');
+
+  try {
+    const res = await fetch('/api/chatbot/status');
+    const data = await res.json().catch(() => ({}));
+    const status = data.status || 'idle';
+
+    if (status === 'ready') {
+      homeChatbotReady = true;
+      homeChatbotBooting = false;
+      clearHomeChatbotStatusTimer();
+      clearHomeChatbotLoadingMessage();
+      if (loading) loading.style.display = 'none';
+      setHomeChatbotInputEnabled(true);
+      appendHomeChatbotMessage('bot', 'Meko đã sẵn sàng. Bạn có thể bắt đầu đặt câu hỏi.');
+      return;
+    }
+
+    if (status === 'error') {
+      homeChatbotReady = false;
+      homeChatbotBooting = false;
+      clearHomeChatbotStatusTimer();
+      clearHomeChatbotLoadingMessage();
+      if (loading) loading.style.display = 'none';
+      setHomeChatbotInputEnabled(true);
+      const detail = data.detail ? ` (${data.detail})` : '';
+      appendHomeChatbotMessage('bot', `Chatbot chưa khởi động được${detail}. Vui lòng thử lại sau ít phút.`);
+      return;
+    }
+  } catch (error) {
+    console.error('Không kiểm tra được trạng thái chatbot:', error);
+  }
+}
+
+async function ensureHomeChatbotReady(showMessage = true) {
+  const loading = document.getElementById('homeChatbotLoading');
+
+  if (homeChatbotReady || homeChatbotBooting) return;
+
+  homeChatbotBooting = true;
+  setHomeChatbotInputEnabled(false);
+  if (loading) loading.style.display = 'flex';
+  if (showMessage) {
+    showHomeChatbotLoadingMessage('Meko đang khởi động dữ liệu, bạn đợi mình một chút nhé...');
+  }
+
+  try {
+    const res = await fetch('/api/chatbot/init', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+
+    if (data.status === 'ready') {
+      homeChatbotReady = true;
+      homeChatbotBooting = false;
+      clearHomeChatbotLoadingMessage();
+      if (loading) loading.style.display = 'none';
+      setHomeChatbotInputEnabled(true);
+      appendHomeChatbotMessage('bot', 'Meko đã sẵn sàng. Bạn có thể bắt đầu đặt câu hỏi.');
+      return;
+    }
+
+    clearHomeChatbotStatusTimer();
+    homeChatbotStatusTimer = setInterval(checkHomeChatbotStatus, 1200);
+  } catch (error) {
+    console.error(error);
+    homeChatbotBooting = false;
+    clearHomeChatbotLoadingMessage();
+    if (loading) loading.style.display = 'none';
+    setHomeChatbotInputEnabled(true);
+    appendHomeChatbotMessage('bot', 'Không thể khởi động chatbot lúc này.');
+  }
 }
 
 async function askHomeChatbot() {
@@ -332,6 +450,12 @@ async function askHomeChatbot() {
 
   const question = (input.value || '').trim();
   if (!question) return;
+
+  if (!homeChatbotReady) {
+    ensureHomeChatbotReady(false);
+    appendHomeChatbotMessage('bot', 'Meko vẫn đang khởi động, bạn đợi thêm một chút rồi gửi lại nhé.');
+    return;
+  }
 
   appendHomeChatbotMessage('user', question);
   input.value = '';
@@ -350,6 +474,9 @@ async function askHomeChatbot() {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      if (data && data.status === 'loading') {
+        ensureHomeChatbotReady(false);
+      }
       const message = (data && data.answer) ? String(data.answer) : 'Không thể kết nối chatbot lúc này.';
       appendHomeChatbotMessage('bot', message);
       return;
@@ -381,6 +508,7 @@ function setupHomeChatbotUI() {
     toggleBtn.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     toggleBtn.setAttribute('aria-expanded', 'true');
+    ensureHomeChatbotReady(true);
     input.focus();
   };
 

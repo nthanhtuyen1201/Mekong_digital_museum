@@ -387,6 +387,56 @@
     gap: 4px;
 }
 
+.detail-chatbot-status-overlay {
+    color: #7a5c45;
+    font-size: 15px;
+    font-weight: 600;
+    left: 50%;
+    line-height: 1.45;
+    max-width: 86%;
+    opacity: 0;
+    padding: 0;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    top: 52%;
+    transform: translate(-50%, -50%) translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    visibility: hidden;
+    z-index: 3;
+}
+
+.detail-chatbot-status-overlay.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+    visibility: visible;
+}
+
+.detail-chatbot-status-overlay.is-loading::after {
+    content: ' ...';
+    animation: chatbot-loading-text 1.1s steps(4, end) infinite;
+}
+
+.detail-chatbot-status-overlay.is-success {
+    color: #2E6336;
+}
+
+.detail-chatbot-status-overlay.is-error {
+    color: #8A2F2F;
+}
+
+@keyframes chatbot-loading-text {
+    0% {
+        opacity: 0.35;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.35;
+    }
+}
+
 .loading-dot {
     display: inline-block;
     width: 6px;
@@ -534,6 +584,7 @@
     transform-origin: bottom right;
     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
     width: 360px;
+    overflow: hidden;
     z-index: 1400;
 }
 
@@ -714,6 +765,12 @@
         height: 68vh;
         right: 10px;
         width: min(95vw, 370px);
+    }
+
+    .detail-chatbot-status-overlay {
+        font-size: 14px;
+        max-width: 84%;
+        top: 50%;
     }
 
     .detail-chatbot-panel::after {

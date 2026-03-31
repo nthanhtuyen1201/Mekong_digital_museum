@@ -222,6 +222,8 @@ def rewrite_answer(obj, raw_answer):
 # ==============================
 # SAFE LLM
 # ==============================
+MODAL_URL = "https://thanhtuyen-1201-2k4--mekong-chatbot-generate.modal.run/generate"
+
 def safe_llm(question, context):
 
     if not lora_loaded:
@@ -246,21 +248,21 @@ Câu hỏi:
 ### Trả lời:
 """
 
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
+    try:
+        import requests
 
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=60,
-            do_sample=False
+        res = requests.post(
+            MODAL_URL,
+            json={
+                "question": question,
+                "context": context
+            },
+            timeout=15
         )
-
-    result = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    if "### Trả lời:" in result:
-        result = result.split("### Trả lời:")[-1]
-
-    return result.strip()
+        return res.json().get("answer", context)
+    except Exception as e:
+        print("❌ Modal lỗi:", e)
+        return context
 
 # ==============================
 # MAIN FUNCTION

@@ -5,6 +5,7 @@ from datetime import datetime
 import os, uuid
 import re
 import unicodedata
+import threading
 import bcrypt
 from dotenv import load_dotenv
 import mongo_utils
@@ -16,6 +17,8 @@ from search_utils import get_object_info, get_object_info_by_image
 # Lazy import for heavy modules
 chatbot_answer = None
 chatbot_last_error = None
+chatbot_loading = False
+chatbot_init_lock = threading.Lock()
 
 # Load biến môi trường từ file .env
 load_dotenv()
@@ -1277,33 +1280,73 @@ def get_image(filename):
 
 def get_chatbot_answer():
     """Lazy load chatbot module on first call"""
-    global chatbot_answer, chatbot_last_error
-    if chatbot_answer is None:
-        try:
-            from chatbot import chatbot_answer as chatbot_func
+    global chatbot_answer, chatbot_last_error, chatbot_loading
+
+    with chatbot_init_lock:
+        if chatbot_answer is not None:
+            return chatbot_answer
+
+        chatbot_loading = True
+        chatbot_last_error = None
+
+    try:
+        from chatbot import chatbot_answer as chatbot_func
+        with chatbot_init_lock:
             chatbot_answer = chatbot_func
             chatbot_last_error = None
-        except MemoryError as e:
+        return chatbot_answer
+    except MemoryError as e:
+        with chatbot_init_lock:
             chatbot_last_error = f"MemoryError: {e}"
-            print(f"ERROR: Memory error loading chatbot: {e}")
-            return None
-        except OSError as e:
-            if "paging file" in str(e).lower():
-                chatbot_last_error = f"OSError: {e}"
-                print(f"ERROR: Insufficient memory (paging file too small): {e}")
-                return None
+        print(f"ERROR: Memory error loading chatbot: {e}")
+        return None
+    except OSError as e:
+        with chatbot_init_lock:
             chatbot_last_error = f"OSError: {e}"
-            print(f"ERROR: OS error loading chatbot: {e}")
-            import traceback
-            traceback.print_exc()
+        if "paging file" in str(e).lower():
+            print(f"ERROR: Insufficient memory (paging file too small): {e}")
             return None
-        except Exception as e:
+        print(f"ERROR: OS error loading chatbot: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+    except Exception as e:
+        with chatbot_init_lock:
             chatbot_last_error = f"{type(e).__name__}: {e}"
-            print(f"ERROR loading chatbot: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    return chatbot_answer
+        print(f"ERROR loading chatbot: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+    finally:
+        with chatbot_init_lock:
+            chatbot_loading = False
+
+def chatbot_status_payload():
+    with chatbot_init_lock:
+        if chatbot_answer is not None:
+            return {"status": "ready", "detail": None}
+        if chatbot_loading:
+            return {"status": "loading", "detail": None}
+        if chatbot_last_error:
+            return {"status": "error", "detail": chatbot_last_error}
+        return {"status": "idle", "detail": None}
+
+def start_chatbot_init_async():
+    with chatbot_init_lock:
+        if chatbot_answer is not None or chatbot_loading:
+            return
+        chatbot_thread = threading.Thread(target=get_chatbot_answer, daemon=True)
+        chatbot_thread.start()
+
+@app.route('/api/chatbot/init', methods=['POST'])
+def api_chatbot_init():
+    start_chatbot_init_async()
+    payload = chatbot_status_payload()
+    return jsonify(payload)
+
+@app.route('/api/chatbot/status', methods=['GET'])
+def api_chatbot_status():
+    return jsonify(chatbot_status_payload())
 
 @app.route('/api/chatbot', methods=['POST'])
 def api_chatbot():
@@ -1311,6 +1354,22 @@ def api_chatbot():
     try:
         data = request.get_json(silent=True) or {}
         user_question = data.get('question', '')
+
+        status = chatbot_status_payload()
+        if status["status"] == "loading":
+            return jsonify({
+                'answer': 'Chatbot đang khởi động, vui lòng đợi một chút.',
+                'status': 'loading'
+            }), 503
+
+        if status["status"] in ("idle", "error"):
+            start_chatbot_init_async()
+            detail = status.get("detail")
+            error_msg = f" ({detail})" if detail else ""
+            return jsonify({
+                'answer': f"Chatbot đang khởi động, vui lòng đợi một chút.{error_msg}",
+                'status': 'loading'
+            }), 503
 
         chatbot_func = get_chatbot_answer()
 
