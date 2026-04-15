@@ -11,6 +11,8 @@ from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
+import mongo_utils
+
 # ==============================
 # LOAD DATA
 # ==============================
@@ -45,6 +47,40 @@ def cosine_sim(vec_a, vec_b):
     if denom == 0:
         return 0.0
     return float(np.dot(a, b) / denom)
+
+def keyword_in_text(text, keyword):
+    text = normalize(text)
+    keyword = normalize(keyword).strip()
+
+    if not keyword:
+        return False
+
+    pattern = r"(?:^|\s)" + re.escape(keyword) + r"(?:\s|$)"
+    return re.search(pattern, text) is not None
+
+def unique_limited(items, limit=20):
+    seen = set()
+    output = []
+
+    for item in items:
+        if item and item not in seen:
+            seen.add(item)
+            output.append(item)
+        if len(output) >= limit:
+            break
+
+    return output
+
+def join_vi(items):
+    items = [item for item in items if item]
+
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} và {items[1]}"
+    return ", ".join(items[:-1]) + f" và {items[-1]}"
 
 # ==============================
 # EMBEDDING
@@ -117,6 +153,285 @@ intent_templates = {
     ]
 }
 
+EXPERIENCE_DEFAULT_RESPONSE = (
+    "Xin lỗi, tôi chỉ cung cấp thông tin về di tích, hiện vật và sự kiện lịch sử. "
+    "Nếu muốn biết thông tin về trải nghiệm bạn nên đến trải nghiệm thực tế."
+)
+
+keyword_intents = [
+    {
+        "intent": "greeting",
+        "keywords": ["xin chao", "chao", "hello", "hi", "hey", "chao ban"],
+        "responses": [
+            "Xin chào! Tôi có thể giúp gì cho bạn hôm nay?",
+            "Chào bạn! Bạn đang cần tìm thông tin gì?"
+        ]
+    },
+    {
+        "intent": "ask_health",
+        "keywords": ["khoe khong", "on khong", "the nao", "sao roi"],
+        "responses": [
+            "Tôi luôn sẵn sàng hỗ trợ bạn! Còn bạn hôm nay thế nào?"
+        ]
+    },
+    {
+        "intent": "ask_identity",
+        "keywords": ["ban la ai", "ai vay", "gioi thieu", "ten gi", "la ai", "ten ban la gi", "la gi"],
+        "responses": [
+            "Tôi là Meko - Chatbot hỗ trợ tra cứu thông tin và giải đáp câu hỏi cho bạn."
+        ]
+    },
+    {
+        "intent": "ask_function",
+        "keywords": [
+            "lam duoc gi",
+            "chuc nang",
+            "giup gi",
+            "ho tro gi",
+            "giup duoc gi",
+            "ho tro duoc gi",
+            "ban giup duoc gi",
+            "ban co the giup gi",
+            "ban co the lam gi",
+            "co the giup toi gi",
+            "co the ho tro gi"
+        ],
+        "responses": [
+            "Tôi có thể giúp bạn tìm kiếm thông tin, trả lời câu hỏi và hỗ trợ sử dụng hệ thống."
+        ]
+    },
+    {
+        "intent": "thanks",
+        "keywords": ["cam on", "thank", "thanks", "tks"],
+        "responses": [
+            "Rất vui được giúp bạn! Nếu cần gì thêm cứ hỏi nhé."
+        ]
+    },
+    {
+        "intent": "sorry",
+        "keywords": ["sai roi", "khong dung", "nham roi", "loi"],
+        "responses": [
+            "Xin lỗi vì sự nhầm lẫn. Bạn có thể nói rõ hơn để tôi hỗ trợ lại chính xác hơn không?"
+        ]
+    },
+    {
+        "intent": "goodbye",
+        "keywords": ["tam biet", "bye", "goodbye", "hen gap lai"],
+        "responses": [
+            "Tạm biệt! Chúc bạn một ngày tốt lành."
+        ]
+    },
+    {
+        "intent": "bot_question",
+        "keywords": ["con nguoi", "robot", "bot", "co phai nguoi"],
+        "responses": [
+            "Tôi là một chatbot được lập trình để hỗ trợ bạn."
+        ]
+    }
+]
+
+always_on_social_intents = {"greeting", "thanks", "goodbye", "sorry"}
+
+chatbot_target_keywords = [
+    "ban",
+    "you",
+    "chatbot",
+    "bot",
+    "tro ly",
+    "assistant",
+    "meko"
+]
+
+def is_chatbot_directed_question(question):
+    q_norm = normalize(question)
+    return any(keyword_in_text(q_norm, kw) for kw in chatbot_target_keywords)
+
+def find_exact_object(question):
+    q_norm = normalize(question)
+
+    for obj in data:
+        if normalize(obj["name"]) in q_norm:
+            return obj
+
+    return None
+
+def fetch_related_items_for_place(place_obj):
+    name = (place_obj.get("name") or "").strip()
+    pid = (place_obj.get("id") or "").strip()
+
+    name_re = re.compile(re.escape(name), re.IGNORECASE) if name else None
+
+    q_art = {"$or": []}
+    if name_re:
+        q_art["$or"].append({"museum": name_re})
+        q_art["$or"].append({"location": name_re})
+    if pid:
+        q_art["$or"].append({"museum": pid})
+        q_art["$or"].append({"related_place": pid})
+        q_art["$or"].append({"related_places": pid})
+    if not q_art["$or"]:
+        q_art = {}
+
+    q_ev = {"$or": []}
+    if name_re:
+        q_ev["$or"].append({"location": name_re})
+    if pid:
+        q_ev["$or"].append({"related_place": pid})
+        q_ev["$or"].append({"related_places": pid})
+    if not q_ev["$or"]:
+        q_ev = {}
+
+    artifact_cursor = mongo_utils.db["artifacts"].find(q_art, {"_id": 0, "id": 1, "name": 1}) if q_art else []
+    event_cursor = mongo_utils.db["events"].find(q_ev, {"_id": 0, "id": 1, "name": 1}) if q_ev else []
+
+    related_artifacts = unique_limited([doc.get("name") for doc in artifact_cursor if doc.get("name")])
+    related_events = unique_limited([doc.get("name") for doc in event_cursor if doc.get("name")])
+
+    return related_artifacts, related_events
+
+def fetch_place_for_artifact(artifact_obj):
+    museum_ref = (artifact_obj.get("museum") or "").strip()
+    if not museum_ref:
+        return None
+
+    place = mongo_utils.find_one("places", {"id": museum_ref})
+    if not place:
+        place = mongo_utils.find_one("places", {"name": museum_ref})
+    return place
+
+def fetch_place_for_event(event_obj):
+    location_ref = (event_obj.get("location") or "").strip()
+    if not location_ref:
+        return None
+
+    place = mongo_utils.find_one("places", {"id": location_ref})
+    if not place:
+        place = mongo_utils.find_one("places", {"name": location_ref})
+    return place
+
+def question_wants_related_artifacts(question):
+    q_norm = normalize(question)
+    return any(keyword_in_text(q_norm, kw) for kw in [
+        "hien vat nao",
+        "hien vat gi",
+        "co nhung hien vat nao",
+        "co hien vat nao",
+        "trung bay nhung hien vat nao",
+        "trung bay nhung hien vat gi",
+        "nhung hien vat tieu bieu",
+        "hien vat tieu bieu"
+    ])
+
+def question_wants_related_events(question):
+    q_norm = normalize(question)
+    return any(keyword_in_text(q_norm, kw) for kw in [
+        "su kien nao",
+        "su kien gi",
+        "co nhung su kien nao",
+        "co su kien nao",
+        "gan voi su kien nao",
+        "lien quan den su kien nao",
+        "su kien tieu bieu"
+    ])
+
+def question_wants_place(question):
+    q_norm = normalize(question)
+    return any(keyword_in_text(q_norm, kw) for kw in [
+        "o dau",
+        "thuoc bao tang nao",
+        "trung bay o dau",
+        "trung bay o bao tang nao",
+        "dien ra o dau",
+        "dien ra o di tich nao",
+        "o dia diem nao"
+    ])
+
+def question_wants_function(question):
+    q_norm = normalize(question)
+    function_phrases = [
+        "ban lam duoc gi",
+        "ban co the lam gi",
+        "ban co the giup gi",
+        "ban giup duoc gi",
+        "meko giup duoc gi",
+        "bot giup duoc gi",
+        "chatbot giup duoc gi",
+        "ban co the ho tro gi",
+        "giup duoc gi",
+        "ho tro duoc gi",
+        "lam duoc gi",
+        "chuc nang",
+        "ban giup gi",
+        "ban co the giup toi gi",
+        "co the giup toi gi",
+        "co the ho tro gi",
+        "ban co the lam duoc gi"
+    ]
+
+    if any(keyword_in_text(q_norm, kw) for kw in function_phrases):
+        return True
+
+    return is_chatbot_directed_question(question) and any(
+        keyword_in_text(q_norm, kw)
+        for kw in ["giup", "ho tro", "lam duoc gi", "chuc nang"]
+    )
+
+def answer_related_context(question, obj):
+    obj_type = obj.get("type")
+
+    if obj_type == "place":
+        if question_wants_related_artifacts(question):
+            related_artifacts, _ = fetch_related_items_for_place(obj)
+            if related_artifacts:
+                intro = f"Tại {obj.get('name')}, các hiện vật tiêu biểu gồm: "
+                return intro + join_vi(related_artifacts) + "."
+            return f"Tôi chưa tìm thấy hiện vật liên quan rõ ràng đến {obj.get('name')}."
+
+        if question_wants_related_events(question):
+            _, related_events = fetch_related_items_for_place(obj)
+            if related_events:
+                if len(related_events) == 1:
+                    return f"{obj.get('name')} gắn với sự kiện {related_events[0]}."
+                return f"{obj.get('name')} gắn với các sự kiện lịch sử gồm: {join_vi(related_events)}."
+            return f"Tôi chưa tìm thấy sự kiện liên quan rõ ràng đến {obj.get('name')}."
+
+    if obj_type == "artifact" and question_wants_place(question):
+        place = fetch_place_for_artifact(obj)
+        if place and place.get("name"):
+            return f"{obj.get('name')} hiện được gắn với {place.get('name')}."
+        return f"Tôi chưa tìm thấy địa điểm liên kết rõ ràng với {obj.get('name')}."
+
+    if obj_type == "event" and question_wants_place(question):
+        place = fetch_place_for_event(obj)
+        if place and place.get("name"):
+            return f"{obj.get('name')} diễn ra tại {place.get('name')}."
+        return f"Tôi chưa tìm thấy địa điểm liên kết rõ ràng với {obj.get('name')}."
+
+    return None
+
+def detect_keyword_intent_response(question):
+    q_norm = normalize(question)
+
+    for intent_cfg in keyword_intents:
+        for kw in intent_cfg["keywords"]:
+            if keyword_in_text(q_norm, kw):
+                return random.choice(intent_cfg["responses"])
+
+    return None
+
+def detect_always_on_social_response(question):
+    q_norm = normalize(question)
+
+    for intent_cfg in keyword_intents:
+        if intent_cfg.get("intent") not in always_on_social_intents:
+            continue
+
+        for kw in intent_cfg["keywords"]:
+            if keyword_in_text(q_norm, kw):
+                return random.choice(intent_cfg["responses"])
+
+    return None
+
 def detect_intent(question):
     q_vec = embed_model.encode([question])[0]
 
@@ -134,6 +449,15 @@ def detect_intent(question):
 
     return best_intent, best_score
 
+def contains_experience_keyword(question):
+    q_norm = normalize(question)
+
+    for kw in intent_templates.get("experience", []):
+        if keyword_in_text(q_norm, kw):
+            return True
+
+    return False
+
 # ==============================
 # EXTRACT
 # ==============================
@@ -147,18 +471,18 @@ def extract_province(question):
 def extract_type(question):
     q = normalize(question)
 
-    if "su kien" in q:
+    if keyword_in_text(q, "su kien"):
         return "event"
-    if "hien vat" in q:
+    if keyword_in_text(q, "hien vat"):
         return "artifact"
-    if "di tich" in q:
+    if keyword_in_text(q, "di tich"):
         return "place"
 
     return None
 
 def is_list_query(question):
     q = normalize(question)
-    return any(x in q for x in ["nhung", "cac", "co gi", "bao gom"])
+    return any(keyword_in_text(q, x) for x in ["nhung", "cac", "co gi", "bao gom"])
 
 # ==============================
 # SEARCH
@@ -269,6 +593,31 @@ Câu hỏi:
 # ==============================
 def chatbot_answer(question):
 
+    always_on_social_response = detect_always_on_social_response(question)
+    if always_on_social_response:
+        return always_on_social_response
+
+    if question_wants_function(question):
+        return "Tôi có thể giúp bạn tìm kiếm thông tin, trả lời câu hỏi và hỗ trợ sử dụng hệ thống."
+
+    if is_chatbot_directed_question(question):
+        keyword_response = detect_keyword_intent_response(question)
+        if keyword_response:
+            return keyword_response
+
+    exact_obj = find_exact_object(question)
+    if exact_obj:
+        related_answer = answer_related_context(question, exact_obj)
+        if related_answer:
+            return related_answer
+
+        best_answer, _ = find_best_qa(question, exact_obj["qas"])
+        if best_answer:
+            return rewrite_answer(exact_obj, best_answer)
+
+    if contains_experience_keyword(question):
+        return EXPERIENCE_DEFAULT_RESPONSE
+
     intent, score_intent = detect_intent(question)
     q_norm = normalize(question)
 
@@ -277,14 +626,7 @@ def chatbot_answer(question):
 
     # Avoid rejecting valid museum-domain queries that were misclassified as "experience".
     if intent == "experience" and score_intent > 0.5 and not is_domain_query:
-        return "Xin lỗi, tôi chỉ cung cấp thông tin về di tích, hiện vật và sự kiện lịch sử."
-
-    # EXACT
-    for obj in data:
-        if normalize(obj["name"]) in q_norm:
-            best_answer, _ = find_best_qa(question, obj["qas"])
-            if best_answer:
-                return rewrite_answer(obj, best_answer)
+        return EXPERIENCE_DEFAULT_RESPONSE
 
     # LIST
     if is_list_query(question):

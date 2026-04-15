@@ -259,24 +259,14 @@
       {
         "question": "Chiến thắng Ấp Bắc có ảnh hưởng đến phong trào cách mạng không",
         "answer": "Chiến thắng Ấp Bắc góp phần thúc đẩy phong trào cách mạng phát triển mạnh mẽ."
-      }
-    ]
-  },
-  {
-    "id": "event_Chiến thắngẤp Bắc",
-    "name": "Chiến thắngẤp Bắc",
-    "type": "event",
-    "province": "Đồng Tháp",
-    "address": "",
-    "address_after": "",
-    "description": "Chiến thắngẤp Bắc tại Đồng Tháp",
-    "qas": [
+      },
       {
-        "question": "Chiến thắngẤp Bắc có phải là bước ngoặt không",
-        "answer": "Chiến thắngẤp Bắc là một bước ngoặt quan trọng trong chiến tranh miền Nam."
+        "question": "Chiến thắng Ấp Bắc có phải là bước ngoặt không",
+        "answer": "Chiến thắng Ấp Bắc là một bước ngoặt quan trọng trong chiến tranh miền Nam."
       }
     ]
   },
+
   {
     "id": "e4723210e81fc",
     "name": "Đánh bại cuộc hành quân Junction City",
@@ -8953,18 +8943,7 @@
       {
         "question": "Bảo tàng Cần Thơ trưng bày bao nhiêu hiện vật",
         "answer": "Lưu giữ trên 16.000 hiện vật, tư liệu; trong đó trưng bày hơn 1.000 hiện vật phục vụ tham quan."
-      }
-    ]
-  },
-  {
-    "id": "place_Bảo tàng Cần",
-    "name": "Bảo tàng Cần",
-    "type": "place",
-    "province": "Cần Thơ",
-    "address": "",
-    "address_after": "",
-    "description": "Bảo tàng Cần tại ThƠ",
-    "qas": [
+      },
       {
         "question": "Không gian mô phỏng nhà tù tại bảo tàng Cần Thơ thể hiện điều gì",
         "answer": "Thể hiện sự hy sinh và tinh thần đấu tranh của chiến sĩ cách mạng."
@@ -14471,18 +14450,7 @@
       {
         "question": "Khu di tích Căn cứ Xẻo Đước mang lại cảm giác gì",
         "answer": "Trang nghiêm và gần gũi thiên nhiên."
-      }
-    ]
-  },
-  {
-    "id": "place_Khu di tích Căn cứ Xẻo Đçuớc",
-    "name": "Khu di tích Căn cứ Xẻo Đçuớc",
-    "type": "place",
-    "province": "Cà Mau",
-    "address": "",
-    "address_after": "",
-    "description": "Khu di tích Căn cứ Xẻo Đçuớc tại Cà Mau",
-    "qas": [
+      },
       {
         "question": "Khu di tích Căn cứ Xẻo Đước có ý nghĩa gì trong lịch sử",
         "answer": "Ghi dấu hoạt động cách mạng quan trọng."
@@ -16279,14 +16247,34 @@
     ]
   },
   {
-    "id": "place_Nhà cổ Ông Kiệt",
-    "name": "Nhà cổ Ông Kiệt",
+    "id": "p1f0e12e70c6d",
+    "name": "Nhà cổ Ông Kiệt",
     "type": "place",
     "province": "Đồng Tháp",
-    "address": "",
-    "address_after": "",
-    "description": "Nhà cổ Ông Kiệt tại Đồng Tháp",
+    "address": "Số 22 ấp Phú Hòa, Đông Hoà Hiệp, Cái Bè, Tiền Giang",
+    "address_after": "Số 22 ấp Phú Hòa, xã Cái Bè, Đồng Tháp",
+    "description": "Nhà cổ Ông Kiệt. Được mệnh danh là \"Cửu đại mỹ gia\" (9 ngôi nhà đẹp) tại Việt Nam, nhìn từ bên ngoài, Nhà cổ Ông Kiệt như bao căn nhà cổ khác lại làng Đông Hòa Hiệp nằm lọt thỏm trong khu vườn rộng mênh mông, xanh tốt. Bước vào khuôn viên, chúng ta có thể bắt gặp khoảng sân rộng - nơi đặt bàn đá, ghế, võng... dưới bóng cây to.\r\n\r\nĐược xây dựng vào khoảng năm 1838 nên ngôi nhà sở hữu lối kiến trúc kiểu chữ Đinh với 3 gian, 2 chái. Tổng diện tích Nhà cổ Ông Kiệt lên đến gần 1000 m2. Chống đỡ nhà có 108 cây cột, toàn bộ đều được làm từ các loại vật liệu gỗ quý như gỗ lim, gỗ cẩm lai, giáng hương, căm xe... Trang trí trên các bộ kèo, cột, xiên và vách của ngôi nhà là các hoa văn được chạm khắc công phu. Đây là một trong những nét đẹp đặc trưng của phong cách kiến trúc tại vùng đất Nam Bộ.",
     "qas": [
+      {
+        "question": "Sân phía trước Nhà cổ Ông Kiệt được lát bằng vật liệu gì",
+        "answer": "Sân được lát bằng gạch đỏ theo ô vuông đều nhau."
+      },
+      {
+        "question": "Cây cảnh trước hiên Nhà cổ Ông Kiệt được tạo hình như thế nào",
+        "answer": "Được cắt tỉa dạng tròn và đặt trong chậu lớn."
+      },
+      {
+        "question": "Không gian gian chính trong Nhà cổ Ông Kiệt được bố trí vật trang trí gì",
+        "answer": "Có tượng phụ nữ và hai bình gốm đặt đối xứng hai bên."
+      },
+      {
+        "question": "Hành lang bên trong Nhà cổ Ông Kiệt được lát bằng vật liệu gì",
+        "answer": "Được lát bằng gạch đỏ."
+      },
+      {
+        "question": "Gian thờ trong Nhà cổ Ông Kiệt được bố trí như thế nào",
+        "answer": "Có bàn thờ và các vật phẩm thờ cúng truyền thống."
+      },
       {
         "question": "Nhà cổ Ông Kiệt nằm ở đâu",
         "answer": "Nằm tại số 22 ấp Phú Hòa, xã Cái Bè, Đồng Tháp."
@@ -16426,37 +16414,6 @@
       {
         "question": "Phù điêu trong Nhà cổ Ông Kiệt thể hiện hình ảnh gì",
         "answer": "Thể hiện hình chim phượng được chạm khắc nổi."
-      }
-    ]
-  },
-  {
-    "id": "p1f0e12e70c6d",
-    "name": "Nhà cổ Ông Kiệt",
-    "type": "place",
-    "province": "Đồng Tháp",
-    "address": "Số 22 ấp Phú Hòa, Đông Hoà Hiệp, Cái Bè, Tiền Giang",
-    "address_after": "Số 22 ấp Phú Hòa, xã Cái Bè, Đồng Tháp",
-    "description": "Nhà cổ Ông Kiệt. Được mệnh danh là \"Cửu đại mỹ gia\" (9 ngôi nhà đẹp) tại Việt Nam, nhìn từ bên ngoài, Nhà cổ Ông Kiệt như bao căn nhà cổ khác lại làng Đông Hòa Hiệp nằm lọt thỏm trong khu vườn rộng mênh mông, xanh tốt. Bước vào khuôn viên, chúng ta có thể bắt gặp khoảng sân rộng - nơi đặt bàn đá, ghế, võng... dưới bóng cây to.\r\n\r\nĐược xây dựng vào khoảng năm 1838 nên ngôi nhà sở hữu lối kiến trúc kiểu chữ Đinh với 3 gian, 2 chái. Tổng diện tích Nhà cổ Ông Kiệt lên đến gần 1000 m2. Chống đỡ nhà có 108 cây cột, toàn bộ đều được làm từ các loại vật liệu gỗ quý như gỗ lim, gỗ cẩm lai, giáng hương, căm xe... Trang trí trên các bộ kèo, cột, xiên và vách của ngôi nhà là các hoa văn được chạm khắc công phu. Đây là một trong những nét đẹp đặc trưng của phong cách kiến trúc tại vùng đất Nam Bộ.",
-    "qas": [
-      {
-        "question": "Sân phía trước Nhà cổ Ông Kiệt được lát bằng vật liệu gì",
-        "answer": "Sân được lát bằng gạch đỏ theo ô vuông đều nhau."
-      },
-      {
-        "question": "Cây cảnh trước hiên Nhà cổ Ông Kiệt được tạo hình như thế nào",
-        "answer": "Được cắt tỉa dạng tròn và đặt trong chậu lớn."
-      },
-      {
-        "question": "Không gian gian chính trong Nhà cổ Ông Kiệt được bố trí vật trang trí gì",
-        "answer": "Có tượng phụ nữ và hai bình gốm đặt đối xứng hai bên."
-      },
-      {
-        "question": "Hành lang bên trong Nhà cổ Ông Kiệt được lát bằng vật liệu gì",
-        "answer": "Được lát bằng gạch đỏ."
-      },
-      {
-        "question": "Gian thờ trong Nhà cổ Ông Kiệt được bố trí như thế nào",
-        "answer": "Có bàn thờ và các vật phẩm thờ cúng truyền thống."
       }
     ]
   },
@@ -17997,13 +17954,13 @@
     ]
   },
   {
-    "id": "place_Khu di tích Chiến thắng Vàm Cái Sình",
+    "id": "pc1060e7d0e6c",
     "name": "Khu di tích Chiến thắng Vàm Cái Sình",
     "type": "place",
     "province": "Cần Thơ",
     "address": "",
     "address_after": "",
-    "description": "Khu di tích Chiến thắng Vàm Cái Sình tại Cần Thơ",
+    "description": "Di tích lịch sử “Địa điểm Chiến thắng Vàm Cái Sình” ở phường 7 (thị xã Vị Thanh, tỉnh Hậu Giang) vừa được Bộ Văn hóa, Thể thao và Du lịch xếp hạng di tích quốc gia.\r\n\r\nChính tại nơi đây cách nay 55 năm (ngày 20-12-1952), đội thủy lôi Đại đội 4053 Tiểu đoàn 410 phối hợp với Tỉnh đội Cần Thơ đánh chìm chiếc tàu chiến bằng sắt của Pháp, tiêu diệt trên 400 tên địch trong đó có một quan tư Pháp.\r\n\r\nNgày 2-5-2004 trong khi nạo vét sông xáng Xà No tại khu vực cầu Cái Sình, Công ty Nạo vét và Xây dựng đường thủy 1 (thuộc Tổng Công ty Xây dựng đường thủy) phát hiện và trục vớt được xác chiếc tàu trên (khoảng 3,5 tấn).\r\n\r\nHiện vật đang được bảo quản tại phường 7, thị xã Vị Thanh. Như vậy, đến nay tỉnh Hậu Giang có chín di tích được xếp hạng di tích lịch sử quốc gia.\r\n\r\nVới diện tích 20.320 m2, Khu di tích Chiến thắng Vàm Cái Sình gồm có các hạng mục: tượng đài, phù điêu, nhà trưng bày và các hạng mục khác; trong đó ấn tượng nhất là tượng đài bằng đá granite mô tả hình tượng ba chiến sĩ cách mạng đang ở tư thế xung phong đầy khí thế, bên dưới bệ tượng đài là một bức phù điêu cách điệu, biểu tượng hoạt động đấu tranh của quân dân vùng Long Mỹ - Vị Thanh.\r\n\r\nTrong nhà trưng bày có một phần xác tàu “Mặt dựng” của quân Pháp mà ta đánh tan thời ấy cùng nhiều hình ảnh, hiện vật thời khác.\r\n",
     "qas": [
       {
         "question": "Khu di tích Chiến thắng Vàm Cái Sình nằm ở đâu",
